@@ -12,14 +12,14 @@ from __future__ import annotations
 
 import json
 import re
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from typing import Literal
 
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel, Field, ValidationError
 
-from lce.packs import Pack, RiskCategory
+from lce.packs import LegalRule, Pack, RiskCategory
 from lce.splitter import Chunk
 
 DISCLAIMER = (
@@ -93,6 +93,8 @@ class _ModelFlag(BaseModel):
 
 class _ModelFlags(BaseModel):
     flags: list[_ModelFlag]
+    # ids of legal rules this clause contradicts; only asked for when the pack has some
+    rules: list[str] = []
 
 
 class Citation(BaseModel):
@@ -102,12 +104,15 @@ class Citation(BaseModel):
 
 
 class RiskFlag(BaseModel):
+    kind: Literal["contract_risk", "legal_rule"] = "contract_risk"
     category: str
     category_label: str
     severity: Literal["high", "medium", "low"]
     explanation: str
     question_to_ask: str
     citations: list[Citation]
+    # Act, section, link, verified, last_reviewed - from configuration, legal rules only
+    legal: dict | None = None
 
 
 _RISK_SYSTEM = """You review one clause of a contract for the person about to sign it.
@@ -116,21 +121,40 @@ Decide whether the clause matches any of these risk categories:
 
 Only flag a category if this clause clearly matches it. Most clauses match none.
 Severity: "high" can cost the signer a lot of money or freedom; "medium" is unfavourable
-but manageable; "low" is worth knowing about.
+but manageable; "low" is worth knowing about.{rules}
 Reply with a single JSON object and nothing else, matching this JSON schema:
 {schema}
 Use {{"flags": []}} if nothing matches."""
 
+_RULES_SECTION = """
+
+Also check the clause against these legal requirements. In "rules", list the id of each
+requirement this clause clearly falls short of or conflicts with. Leave "rules" empty if
+it meets them or doesn't deal with them:
+{rules}"""
+
 
 def _classify_clause(
-    llm: BaseChatModel, chunk: Chunk, categories: dict[str, RiskCategory]
+    llm: BaseChatModel,
+    chunk: Chunk,
+    categories: dict[str, RiskCategory],
+    rules: dict[str, LegalRule],
 ) -> list[RiskFlag]:
     category_list = "\n".join(f"- {c.id}: {c.description}" for c in categories.values())
+    rules_section = (
+        _RULES_SECTION.format(
+            rules="\n".join(f"- {r.id}: {r.requirement}" for r in rules.values())
+        )
+        if rules
+        else ""
+    )
     label = f"Clause {chunk.clause}" if chunk.clause else "Preamble"
     messages = [
         SystemMessage(
             _RISK_SYSTEM.format(
-                categories=category_list, schema=json.dumps(_ModelFlags.model_json_schema())
+                categories=category_list,
+                rules=rules_section,
+                schema=json.dumps(_ModelFlags.model_json_schema()),
             )
         ),
         HumanMessage(f"Clause to review ({label}, p. {chunk.page}):\n\n{chunk.text}"),
@@ -164,26 +188,134 @@ def _classify_clause(
                 citations=[citation],
             )
         )
+    for rule_id in dict.fromkeys(parsed.rules):  # de-duplicated, order kept
+        rule = rules.get(rule_id)
+        if rule is None:  # unknown, placeholder, or a "missing" rule: ignore
+            continue
+        out.append(
+            RiskFlag(
+                kind="legal_rule",
+                category=rule.id,
+                category_label=rule.topic,
+                severity=rule.severity,
+                explanation=rule.requirement,
+                question_to_ask=rule.question,
+                citations=[citation],
+                legal=rule.legal(),
+            )
+        )
     return out
 
 
 class RiskScanResult(BaseModel):
     skipped_clauses: list[str | None] = []
+    skipped_rules: list[str] = []
 
 
 def find_risks(
     llm: BaseChatModel,
     chunks: list[Chunk],
-    categories: list[RiskCategory],
+    pack: Pack,
     result: RiskScanResult,
 ) -> Iterator[RiskFlag]:
-    """Yield risk flags clause by clause. Clauses whose output is invalid twice are
-    recorded in ``result.skipped_clauses`` instead of stopping the scan."""
-    by_id = {c.id: c for c in categories}
+    """Yield contract-risk and legal-rule flags clause by clause. Clauses whose output
+    is invalid twice are recorded in ``result.skipped_clauses`` instead of stopping."""
+    by_id = {c.id: c for c in pack.risk_categories}
+    rules = {r.id: r for r in pack.active_rules("contradiction")}
     for chunk in chunks:
         if chunk.clause is None:  # preamble: parties and premises, not obligations
             continue
         try:
-            yield from _classify_clause(llm, chunk, by_id)
+            yield from _classify_clause(llm, chunk, by_id, rules)
         except AnalysisError:
             result.skipped_clauses.append(chunk.clause)
+
+
+# ------------------------------------------------------------- missing items
+
+# Up to this many characters, the whole contract goes into one missing-item prompt.
+# Longer contracts check each rule against the clauses retrieved for it instead.
+WHOLE_CONTRACT_CHARS = 24_000
+RULE_EXCERPTS = 4
+
+_MISSING_SYSTEM = """You check whether a contract says nothing about certain legal requirements.
+For each requirement below, decide whether the contract addresses it at all, even
+if it addresses it badly. List in "missing" only the ids of requirements the
+contract says nothing about. Leave it empty if every requirement is addressed.
+Requirements:
+{rules}
+Reply with a single JSON object and nothing else, matching this JSON schema:
+{schema}"""
+
+
+class _ModelMissing(BaseModel):
+    missing: list[str]
+
+
+class MissingItem(BaseModel):
+    rule: str
+    topic: str
+    severity: Literal["high", "medium", "low"]
+    requirement: str
+    question_to_ask: str
+    legal: dict
+
+
+def _ask_missing(
+    llm: BaseChatModel, rules: list[LegalRule], body: str
+) -> list[str] | None:
+    """Rule ids the model says are missing from ``body``; None if invalid twice."""
+    messages = [
+        SystemMessage(
+            _MISSING_SYSTEM.format(
+                rules="\n".join(f"- {r.id}: {r.requirement}" for r in rules),
+                schema=json.dumps(_ModelMissing.model_json_schema()),
+            )
+        ),
+        HumanMessage(body),
+    ]
+    for _ in range(MAX_ATTEMPTS):
+        reply = llm.invoke(messages)
+        try:
+            return _ModelMissing.model_validate(parse_json(str(reply.content))).missing
+        except (ValueError, ValidationError):
+            continue
+    return None
+
+
+def find_missing(
+    llm: BaseChatModel,
+    chunks: list[Chunk],
+    pack: Pack,
+    result: RiskScanResult,
+    search: Callable[[str, int], list[Chunk]],
+) -> Iterator[MissingItem]:
+    """Yield required items the contract leaves out. Rules whose check fails twice are
+    recorded in ``result.skipped_rules``. ``search`` retrieves clauses for long contracts."""
+    rules = pack.active_rules("missing")
+    if not rules:
+        return
+    text = _contract_text(chunks)
+    if len(text) <= WHOLE_CONTRACT_CHARS:
+        batches = [(rules, f"Full contract:\n\n{text}")]
+    else:
+        batches = [
+            ([r], f"Relevant excerpts:\n\n{_contract_text(search(r.requirement, RULE_EXCERPTS))}")
+            for r in rules
+        ]
+    for batch, body in batches:
+        missing = _ask_missing(llm, batch, body)
+        if missing is None:
+            result.skipped_rules.extend(r.id for r in batch)
+            continue
+        wanted = set(missing)
+        for rule in batch:  # config order, only rules that were asked about
+            if rule.id in wanted:
+                yield MissingItem(
+                    rule=rule.id,
+                    topic=rule.topic,
+                    severity=rule.severity,
+                    requirement=rule.requirement,
+                    question_to_ask=rule.question,
+                    legal=rule.legal(),
+                )

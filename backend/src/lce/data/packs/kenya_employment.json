@@ -101,5 +101,91 @@
       "description": "The employer claims ownership of the employee's work or inventions, especially outside working hours"
     }
   ],
+  "legal_rules": [
+    {
+      "id": "annual_leave",
+      "topic": "Annual leave",
+      "check": "contradiction",
+      "severity": "high",
+      "act": "Employment Act, 2007",
+      "section": "TO FILL FROM ACT",
+      "requirement": "Minimum paid annual leave: TO FILL FROM ACT",
+      "question": "Can the annual leave be raised to at least the legal minimum?",
+      "link": "https://new.kenyalaw.org/akn/ke/act/2007/11",
+      "status": "placeholder",
+      "verified": false,
+      "last_reviewed": null
+    },
+    {
+      "id": "sick_leave",
+      "topic": "Sick leave",
+      "check": "missing",
+      "severity": "medium",
+      "act": "Employment Act, 2007",
+      "section": "TO FILL FROM ACT",
+      "requirement": "Paid sick leave the employee is entitled to: TO FILL FROM ACT",
+      "question": "How much paid sick leave am I entitled to?",
+      "link": "https://new.kenyalaw.org/akn/ke/act/2007/11",
+      "status": "placeholder",
+      "verified": false,
+      "last_reviewed": null
+    },
+    {
+      "id": "maternity_paternity_leave",
+      "topic": "Maternity and paternity leave",
+      "check": "missing",
+      "severity": "medium",
+      "act": "Employment Act, 2007",
+      "section": "TO FILL FROM ACT",
+      "requirement": "Maternity and paternity leave the employee is entitled to: TO FILL FROM ACT",
+      "question": "What maternity or paternity leave does this job give?",
+      "link": "https://new.kenyalaw.org/akn/ke/act/2007/11",
+      "status": "placeholder",
+      "verified": false,
+      "last_reviewed": null
+    },
+    {
+      "id": "termination_notice",
+      "topic": "Termination notice",
+      "check": "contradiction",
+      "severity": "high",
+      "act": "Employment Act, 2007",
+      "section": "TO FILL FROM ACT",
+      "requirement": "Minimum notice to end the contract: TO FILL FROM ACT",
+      "question": "Can the notice period be raised to at least the legal minimum?",
+      "link": "https://new.kenyalaw.org/akn/ke/act/2007/11",
+      "status": "placeholder",
+      "verified": false,
+      "last_reviewed": null
+    },
+    {
+      "id": "probation_length",
+      "topic": "Probation length",
+      "check": "contradiction",
+      "severity": "high",
+      "act": "Employment Act, 2007",
+      "section": "TO FILL FROM ACT",
+      "requirement": "Maximum length of a probation period, including any extension: TO FILL FROM ACT",
+      "question": "Can probation be limited to the legal maximum?",
+      "link": "https://new.kenyalaw.org/akn/ke/act/2007/11",
+      "status": "placeholder",
+      "verified": false,
+      "last_reviewed": null
+    },
+    {
+      "id": "written_particulars",
+      "topic": "Written particulars",
+      "check": "missing",
+      "severity": "medium",
+      "act": "Employment Act, 2007",
+      "section": "TO FILL FROM ACT",
+      "requirement": "Particulars a written contract of employment must state: TO FILL FROM ACT",
+      "question": "Can the missing particulars be added to the contract?",
+      "link": "https://new.kenyalaw.org/akn/ke/act/2007/11",
+      "status": "placeholder",
+      "verified": false,
+      "last_reviewed": null
+    }
+  ],
   "sample": "sample_employment_ke.pdf"
 }

@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { Citation, RiskFlag, Severity } from "@/lib/api";
+import type { Citation, LegalSource, MissingItem, RiskFlag, Severity } from "@/lib/api";
 
 const SEVERITY_STYLE: Record<Severity, string> = {
   high: "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200",
@@ -10,6 +10,38 @@ const SEVERITY_STYLE: Record<Severity, string> = {
 
 export function citationLabel(c: Citation) {
   return `${c.clause ? `Clause ${c.clause}` : "Preamble"}, p. ${c.page}`;
+}
+
+function SeverityTag({ severity }: { severity: Severity }) {
+  return (
+    <span
+      className={`rounded px-2 py-0.5 text-xs font-semibold uppercase ${SEVERITY_STYLE[severity]}`}
+    >
+      {severity}
+    </span>
+  );
+}
+
+/** The Act citation for a legal rule, with a warning until a professional has reviewed it. */
+function LegalCitation({ legal }: { legal: LegalSource }) {
+  return (
+    <div className="space-y-2">
+      <a
+        href={legal.link}
+        target="_blank"
+        rel="noreferrer"
+        className="inline-block text-sm underline underline-offset-2"
+      >
+        {legal.act}, {legal.section}
+      </a>
+      {!legal.verified && (
+        <p className="rounded border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
+          <strong>Unverified rule.</strong> This legal rule hasn&apos;t been reviewed by a
+          qualified professional yet. Check the Act before relying on it.
+        </p>
+      )}
+    </div>
+  );
 }
 
 export function RiskCard({
@@ -23,12 +55,9 @@ export function RiskCard({
     <Card>
       <CardHeader>
         <CardTitle className="flex flex-wrap items-center gap-2 text-base">
-          <span
-            className={`rounded px-2 py-0.5 text-xs font-semibold uppercase ${SEVERITY_STYLE[flag.severity]}`}
-          >
-            {flag.severity}
-          </span>
+          <SeverityTag severity={flag.severity} />
           {flag.category_label}
+          {flag.kind === "legal_rule" && <Badge variant="secondary">Legal requirement</Badge>}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3 text-sm">
@@ -37,6 +66,7 @@ export function RiskCard({
           <span className="font-medium">Ask before signing: </span>
           <span className="text-muted-foreground">{flag.question_to_ask}</span>
         </p>
+        {flag.legal && <LegalCitation legal={flag.legal} />}
         <div className="flex flex-wrap gap-2">
           {flag.citations.map((c, i) => (
             <button key={i} type="button" onClick={() => onCite(c)}>
@@ -46,6 +76,27 @@ export function RiskCard({
             </button>
           ))}
         </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+export function MissingItemCard({ item }: { item: MissingItem }) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex flex-wrap items-center gap-2 text-base">
+          <SeverityTag severity={item.severity} />
+          {item.topic}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3 text-sm">
+        <p>{item.requirement}</p>
+        <p>
+          <span className="font-medium">Ask before signing: </span>
+          <span className="text-muted-foreground">{item.question_to_ask}</span>
+        </p>
+        <LegalCitation legal={item.legal} />
       </CardContent>
     </Card>
   );
