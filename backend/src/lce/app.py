@@ -11,13 +11,13 @@ import uuid
 from dataclasses import dataclass, field
 from importlib.resources import files
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from langchain_core.embeddings import Embeddings
 from langchain_core.language_models import BaseChatModel
 from pydantic import BaseModel
 
-from lce.pdf import extract_pages
+from lce.pdf import MAX_BYTES, UploadRejected, extract_pages
 from lce.splitter import Chunk, split_clauses
 
 
@@ -65,11 +65,25 @@ def create_app(
             chunks=[ChunkOut(text=c.text, clause=c.clause, page=c.page) for c in session.chunks],
         )
 
-    @app.post("/api/sample", response_model=SessionOut)
-    def load_sample() -> SessionOut:
-        session = Session(id=uuid.uuid4().hex, chunks=split_clauses(extract_pages(_load_sample_pdf())))
+    def new_session(pdf_bytes: bytes) -> SessionOut:
+        session = Session(id=uuid.uuid4().hex, chunks=split_clauses(extract_pages(pdf_bytes)))
         sessions[session.id] = session
         return to_out(session)
+
+    @app.post("/api/sample", response_model=SessionOut)
+    def load_sample() -> SessionOut:
+        return new_session(_load_sample_pdf())
+
+    @app.post("/api/upload", response_model=SessionOut)
+    async def upload(file: UploadFile) -> SessionOut:
+        # Read one byte past the limit so oversized files are detected without reading them fully.
+        data = await file.read(MAX_BYTES + 1)
+        try:
+            return new_session(data)
+        except UploadRejected as e:
+            raise HTTPException(
+                status_code=e.status, detail={"code": e.code, "message": e.message}
+            ) from None
 
     @app.get("/api/sessions/{session_id}", response_model=SessionOut)
     def get_session(session_id: str) -> SessionOut:

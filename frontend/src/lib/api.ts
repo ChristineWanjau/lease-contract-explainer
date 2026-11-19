@@ -19,3 +19,19 @@ export async function loadSample(): Promise<SessionOut> {
   }
   return res.json();
 }
+
+export async function uploadContract(file: File): Promise<SessionOut> {
+  const body = new FormData();
+  body.append("file", file);
+  const res = await fetch(`${API_URL}/api/upload`, { method: "POST", body });
+  if (!res.ok) {
+    const data = await res.json().catch(() => null);
+    const message: unknown = data?.detail?.message;
+    throw new Error(
+      typeof message === "string"
+        ? message
+        : `Could not upload the contract (HTTP ${res.status}).`,
+    );
+  }
+  return res.json();
+}
