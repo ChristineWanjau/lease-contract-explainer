@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import { CitationPanel, RiskCard } from "@/components/risk-card";
 import { SummaryCard } from "@/components/summary-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,31 +17,47 @@ import {
   loadSample,
   streamAnalysis,
   uploadContract,
+  type Citation,
+  type RiskFlag,
   type SessionOut,
   type Summary,
 } from "@/lib/api";
 
-type Analysis =
-  | { status: "running" }
-  | { status: "done"; summary: Summary; disclaimer: string }
-  | { status: "error"; message: string };
+type Analysis = {
+  stage: "summarizing" | "scanning" | "done" | "error";
+  summary: Summary | null;
+  flags: RiskFlag[];
+  skipped: (string | null)[];
+  message?: string;
+};
+
+const START: Analysis = { stage: "summarizing", summary: null, flags: [], skipped: [] };
 
 export default function Home() {
   const [session, setSession] = useState<SessionOut | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
+  const [citation, setCitation] = useState<Citation | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
   // Start the analysis whenever a new contract is loaded.
   useEffect(() => {
     if (!session) return;
     return streamAnalysis(session.session_id, (e) => {
-      if (e.event === "summary") {
-        setAnalysis({ status: "done", ...e.data });
-      } else if (e.event === "error") {
-        setAnalysis({ status: "error", message: e.data.message });
-      }
+      setAnalysis((a) => {
+        const prev = a ?? START;
+        switch (e.event) {
+          case "summary":
+            return { ...prev, stage: "scanning", summary: e.data.summary };
+          case "risk_flag":
+            return { ...prev, flags: [...prev.flags, e.data] };
+          case "done":
+            return { ...prev, stage: "done", skipped: e.data.skipped_clauses };
+          case "error":
+            return { ...prev, stage: "error", message: e.data.message };
+        }
+      });
     });
   }, [session]);
 
@@ -49,7 +66,8 @@ export default function Home() {
     setError(null);
     try {
       const loaded = await load();
-      setAnalysis({ status: "running" });
+      setAnalysis(START);
+      setCitation(null);
       setSession(loaded);
     } catch (e) {
       setError(
@@ -117,17 +135,46 @@ export default function Home() {
         </p>
       )}
 
-      {analysis?.status === "running" && (
+      {analysis?.stage === "summarizing" && (
         <p className="animate-pulse text-sm text-muted-foreground" aria-live="polite">
           Reading your contract with the local model… this can take a minute or two.
         </p>
       )}
-      {analysis?.status === "error" && (
+      {analysis?.stage === "error" && (
         <p role="alert" className="text-sm text-destructive">
           {analysis.message}
         </p>
       )}
-      {analysis?.status === "done" && <SummaryCard summary={analysis.summary} />}
+      {analysis?.summary && <SummaryCard summary={analysis.summary} />}
+
+      {analysis && analysis.stage !== "summarizing" && (
+        <section className="space-y-3" aria-label="Risk flags" aria-live="polite">
+          <h2 className="text-lg font-medium">
+            Risk flags ({analysis.flags.length})
+          </h2>
+          {analysis.flags.map((flag, i) => (
+            <RiskCard key={i} flag={flag} onCite={setCitation} />
+          ))}
+          {analysis.stage === "scanning" && (
+            <p className="animate-pulse text-sm text-muted-foreground">
+              Checking clauses for risks…
+            </p>
+          )}
+          {analysis.stage === "done" && analysis.flags.length === 0 && (
+            <p className="text-sm text-muted-foreground">
+              No clauses matched the risk checklist. Still read the contract carefully.
+            </p>
+          )}
+          {analysis.stage === "done" && analysis.skipped.length > 0 && (
+            <p className="text-sm text-muted-foreground">
+              Couldn&apos;t check:{" "}
+              {analysis.skipped.map((c) => (c ? `Clause ${c}` : "Preamble")).join(", ")}.
+            </p>
+          )}
+        </section>
+      )}
+
+      <CitationPanel citation={citation} onClose={() => setCitation(null)} />
 
       {session && (
         <details className="group space-y-3">

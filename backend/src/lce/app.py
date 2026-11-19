@@ -21,7 +21,15 @@ from langchain_core.embeddings import Embeddings
 from langchain_core.language_models import BaseChatModel
 from pydantic import BaseModel
 
-from lce.analysis import DISCLAIMER, AnalysisError, summarize
+from lce.analysis import (
+    DISCLAIMER,
+    AnalysisError,
+    RiskCategory,
+    RiskScanResult,
+    find_risks,
+    load_risk_categories,
+    summarize,
+)
 from lce.pdf import MAX_BYTES, UploadRejected, extract_pages
 from lce.splitter import Chunk, split_clauses
 
@@ -57,10 +65,16 @@ def create_app(
     llm: BaseChatModel,
     embeddings: Embeddings,
     allowed_origins: list[str] | None = None,
+    risk_categories: list[dict] | None = None,
 ) -> FastAPI:
     app = FastAPI(title="Lease & Contract Explainer")
     app.state.llm = llm
     app.state.embeddings = embeddings
+    categories = (
+        [RiskCategory.model_validate(c) for c in risk_categories]
+        if risk_categories is not None
+        else load_risk_categories()
+    )
     sessions: dict[str, Session] = {}  # in memory only, by design
 
     app.add_middleware(
@@ -112,6 +126,12 @@ def create_app(
         def events() -> Iterator[str]:
             try:
                 summary = summarize(llm, session.chunks)
+                yield _sse(
+                    "summary", {"summary": summary.model_dump(), "disclaimer": DISCLAIMER}
+                )
+                scan = RiskScanResult()
+                for flag in find_risks(llm, session.chunks, categories, scan):
+                    yield _sse("risk_flag", flag.model_dump())
             except AnalysisError as e:
                 yield _sse("error", {"message": str(e)})
                 return
@@ -122,8 +142,7 @@ def create_app(
                     {"message": "The local model couldn't be reached. Is Ollama running?"},
                 )
                 return
-            yield _sse("summary", {"summary": summary.model_dump(), "disclaimer": DISCLAIMER})
-            yield _sse("done", {})
+            yield _sse("done", {"skipped_clauses": scan.skipped_clauses})
 
         return StreamingResponse(events(), media_type="text/event-stream")
 

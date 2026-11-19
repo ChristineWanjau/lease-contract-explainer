@@ -20,9 +20,27 @@ export type Summary = {
   obligations: string[];
 };
 
+export type Citation = {
+  clause: string | null;
+  page: number;
+  quote: string;
+};
+
+export type Severity = "high" | "medium" | "low";
+
+export type RiskFlag = {
+  category: string;
+  category_label: string;
+  severity: Severity;
+  explanation: string;
+  question_to_ask: string;
+  citations: Citation[];
+};
+
 export type AnalysisEvent =
   | { event: "summary"; data: { summary: Summary; disclaimer: string } }
-  | { event: "done"; data: Record<string, never> }
+  | { event: "risk_flag"; data: RiskFlag }
+  | { event: "done"; data: { skipped_clauses: (string | null)[] } }
   | { event: "error"; data: { message: string } };
 
 /** Stream the analysis of a session; calls onEvent for each Server-Sent Event. */
@@ -36,9 +54,12 @@ export function streamAnalysis(
   source.addEventListener("summary", (msg) => {
     onEvent({ event: "summary", data: JSON.parse(msg.data) });
   });
-  source.addEventListener("done", () => {
+  source.addEventListener("risk_flag", (msg) => {
+    onEvent({ event: "risk_flag", data: JSON.parse(msg.data) });
+  });
+  source.addEventListener("done", (msg) => {
     source.close();
-    onEvent({ event: "done", data: {} });
+    onEvent({ event: "done", data: JSON.parse(msg.data) });
   });
   // "error" is both the server's error event (has data) and the browser's
   // connection-failure event (no data), so one listener handles both.
