@@ -1,0 +1,80 @@
+{
+  "id": "general",
+  "name": "General contract",
+  "description": "Any contract or lease that doesn't match a more specific type",
+  "summary_fields": [
+    {
+      "name": "parties",
+      "label": "Parties",
+      "description": "Who is bound by the contract, with their role",
+      "kind": "list"
+    },
+    {
+      "name": "duration",
+      "label": "Duration",
+      "description": "How long the contract lasts",
+      "kind": "single"
+    },
+    {
+      "name": "key_dates",
+      "label": "Key dates",
+      "description": "Start, end, renewal and notice deadlines",
+      "kind": "list"
+    },
+    {
+      "name": "payments",
+      "label": "Payments",
+      "description": "Rent, salary, fees, deposits and amounts",
+      "kind": "list"
+    },
+    {
+      "name": "obligations",
+      "label": "Your obligations",
+      "description": "Main things the signer must do",
+      "kind": "list"
+    }
+  ],
+  "risk_categories": [
+    {
+      "id": "early_termination",
+      "label": "Early termination / penalties",
+      "description": "Fees, penalties or lost money if the signer ends the contract early"
+    },
+    {
+      "id": "automatic_renewal",
+      "label": "Automatic renewal",
+      "description": "The contract renews by itself unless the signer acts, often with a long notice deadline"
+    },
+    {
+      "id": "deposit_forfeiture",
+      "label": "Deposit / fee forfeiture",
+      "description": "The signer can lose a deposit or prepaid fees, especially regardless of actual damage"
+    },
+    {
+      "id": "one_sided_liability",
+      "label": "One-sided liability / indemnity",
+      "description": "The signer covers the other party's losses or carries responsibilities that normally belong to the other party"
+    },
+    {
+      "id": "price_increase",
+      "label": "Rent / price increases",
+      "description": "The other party can raise rent, salary deductions or prices, especially at any time or by any amount"
+    },
+    {
+      "id": "restrictive_covenant",
+      "label": "Non-compete / restrictive covenants",
+      "description": "Limits on where the signer can work, live, or what they can do during or after the contract"
+    },
+    {
+      "id": "notice_period",
+      "label": "Notice periods",
+      "description": "Long, strict or unusual notice requirements the signer must meet"
+    },
+    {
+      "id": "unilateral_changes",
+      "label": "Unilateral changes",
+      "description": "The other party can change the terms without the signer's agreement"
+    }
+  ],
+  "sample": "sample_lease.pdf"
+}

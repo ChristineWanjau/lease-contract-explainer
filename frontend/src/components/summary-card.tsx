@@ -15,20 +15,26 @@ function Row({ label, items }: { label: string; items: string[] }) {
   );
 }
 
+/** Renders whatever fields the active contract type pack defines, in pack order. */
 export function SummaryCard({ summary }: { summary: Summary }) {
+  const fields = summary.fields;
   return (
     <Card>
       <CardHeader>
         <CardTitle>Summary</CardTitle>
       </CardHeader>
       <CardContent className="grid gap-4 sm:grid-cols-2">
-        <Row label="Parties" items={summary.parties} />
-        <Row label="Duration" items={[summary.duration]} />
-        <Row label="Key dates" items={summary.key_dates} />
-        <Row label="Payments" items={summary.payments} />
-        <div className="sm:col-span-2">
-          <Row label="Your obligations" items={summary.obligations} />
-        </div>
+        {fields.map((field, i) => {
+          const value = summary.values[field.name];
+          const items = Array.isArray(value) ? value : value ? [value] : [];
+          // An odd field count leaves the last field alone on its row; let it span both columns.
+          const wide = fields.length % 2 === 1 && i === fields.length - 1;
+          return (
+            <div key={field.name} className={wide ? "sm:col-span-2" : undefined}>
+              <Row label={field.label} items={items} />
+            </div>
+          );
+        })}
       </CardContent>
     </Card>
   );

@@ -12,12 +12,16 @@ export type SessionOut = {
 export const API_URL =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
+export type SummaryField = {
+  name: string;
+  label: string;
+  kind: "single" | "list";
+};
+
+/** Values keyed by field name; shape depends on the active contract type pack. */
 export type Summary = {
-  parties: string[];
-  key_dates: string[];
-  payments: string[];
-  duration: string;
-  obligations: string[];
+  fields: SummaryField[];
+  values: Record<string, string | string[]>;
 };
 
 export type Citation = {
@@ -52,7 +56,18 @@ export function streamAnalysis(
     `${API_URL}/api/sessions/${sessionId}/analyze`,
   );
   source.addEventListener("summary", (msg) => {
-    onEvent({ event: "summary", data: JSON.parse(msg.data) });
+    const raw: {
+      summary: Summary["values"];
+      fields: SummaryField[];
+      disclaimer: string;
+    } = JSON.parse(msg.data);
+    onEvent({
+      event: "summary",
+      data: {
+        summary: { fields: raw.fields, values: raw.summary },
+        disclaimer: raw.disclaimer,
+      },
+    });
   });
   source.addEventListener("risk_flag", (msg) => {
     onEvent({ event: "risk_flag", data: JSON.parse(msg.data) });

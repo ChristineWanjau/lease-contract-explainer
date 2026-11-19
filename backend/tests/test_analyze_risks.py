@@ -1,6 +1,7 @@
 """Seam 1: risk flags with citations (#5)."""
 
 import json
+from importlib.resources import files
 
 from fastapi.testclient import TestClient
 from langchain_core.embeddings import DeterministicFakeEmbedding
@@ -56,10 +57,14 @@ class RoutingFake(FakeListChatModel):
 
 def make_client(routes: dict[str, list[str]], categories: list[dict] | None = None) -> TestClient:
     llm = RoutingFake(responses=["unused"], routes=routes, summary_replies=[json.dumps(VALID_SUMMARY)])
+    packs = None
+    if categories is not None:  # the General pack, with its checklist swapped out
+        general = json.loads(files("lce").joinpath("data/packs/general.json").read_text())
+        packs = [dict(general, risk_categories=categories)]
     app = create_app(
         llm=llm,
         embeddings=DeterministicFakeEmbedding(size=16),
-        risk_categories=categories,
+        packs=packs,
     )
     return TestClient(app)
 
@@ -75,8 +80,6 @@ def read_events(client: TestClient, session_id: str) -> list[tuple[str, dict]]:
 
 
 def sample_text() -> str:
-    from importlib.resources import files
-
     return "\n".join(extract_pages(files("lce").joinpath("data/sample_lease.pdf").read_bytes()))
 
 
