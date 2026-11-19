@@ -19,7 +19,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from langchain_core.embeddings import Embeddings
 from langchain_core.language_models import BaseChatModel
-from pydantic import BaseModel
+from langchain_core.messages import BaseMessage
+from pydantic import BaseModel, Field, field_validator
 
 from lce.analysis import (
     DISCLAIMER,
@@ -29,6 +30,13 @@ from lce.analysis import (
     find_risks,
     load_risk_categories,
     summarize,
+)
+from lce.chat import (
+    ContractIndex,
+    StreamedAnswer,
+    build_messages,
+    remember,
+    stream_answer,
 )
 from lce.pdf import MAX_BYTES, UploadRejected, extract_pages
 from lce.splitter import Chunk, split_clauses
@@ -51,6 +59,19 @@ class SessionOut(BaseModel):
 class Session:
     id: str
     chunks: list[Chunk] = field(default_factory=list)
+    index: ContractIndex | None = None  # built lazily on first question
+    history: list[BaseMessage] = field(default_factory=list)
+
+
+class ChatIn(BaseModel):
+    question: str = Field(min_length=1, max_length=2000)
+
+    @field_validator("question")
+    @classmethod
+    def not_blank(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("question must not be blank")
+        return v.strip()
 
 
 def _load_sample_pdf() -> bytes:
@@ -143,6 +164,41 @@ def create_app(
                 )
                 return
             yield _sse("done", {"skipped_clauses": scan.skipped_clauses})
+
+        return StreamingResponse(events(), media_type="text/event-stream")
+
+    @app.post("/api/sessions/{session_id}/chat")
+    def chat(session_id: str, body: ChatIn) -> StreamingResponse:
+        session = sessions.get(session_id)
+        if session is None:
+            raise HTTPException(status_code=404, detail="Session not found")
+
+        def events() -> Iterator[str]:
+            try:
+                if session.index is None:
+                    session.index = ContractIndex(session.chunks, embeddings)
+                retrieved = session.index.search(body.question)
+                messages = build_messages(body.question, retrieved, session.history)
+                result = StreamedAnswer()
+                for token in stream_answer(llm, messages, retrieved, result):
+                    yield _sse("token", {"text": token})
+            except Exception:
+                logger.exception("chat failed")
+                yield _sse(
+                    "error",
+                    {"message": "The local model couldn't be reached. Is Ollama running?"},
+                )
+                return
+            remember(session.history, body.question, result.text)
+            yield _sse(
+                "answer",
+                {
+                    "text": result.text,
+                    "supported": result.supported,
+                    "citations": [c.model_dump() for c in result.citations],
+                },
+            )
+            yield _sse("done", {})
 
         return StreamingResponse(events(), media_type="text/event-stream")
 

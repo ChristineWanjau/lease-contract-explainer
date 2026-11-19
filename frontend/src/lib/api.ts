@@ -99,3 +99,60 @@ export async function uploadContract(file: File): Promise<SessionOut> {
   }
   return res.json();
 }
+
+export type ChatAnswer = {
+  text: string;
+  supported: boolean;
+  citations: Citation[];
+};
+
+export type ChatEvent =
+  | { event: "token"; data: { text: string } }
+  | { event: "answer"; data: ChatAnswer }
+  | { event: "done"; data: Record<string, never> }
+  | { event: "error"; data: { message: string } };
+
+/** POST a question and parse the Server-Sent Events response (EventSource is GET-only). */
+export async function askQuestion(
+  sessionId: string,
+  question: string,
+  onEvent: (e: ChatEvent) => void,
+  signal?: AbortSignal,
+): Promise<void> {
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}/api/sessions/${sessionId}/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question }),
+      signal,
+    });
+  } catch {
+    if (signal?.aborted) return;
+    onEvent({ event: "error", data: { message: "Lost connection to the backend. Is it running?" } });
+    return;
+  }
+  if (!res.ok || !res.body) {
+    onEvent({ event: "error", data: { message: `Could not ask the question (HTTP ${res.status}).` } });
+    return;
+  }
+  const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
+  let buffer = "";
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += value;
+    let end: number;
+    while ((end = buffer.indexOf("\n\n")) !== -1) {
+      const block = buffer.slice(0, end);
+      buffer = buffer.slice(end + 2);
+      let event = "";
+      let data = "";
+      for (const line of block.split("\n")) {
+        if (line.startsWith("event: ")) event = line.slice(7);
+        else if (line.startsWith("data: ")) data += line.slice(6);
+      }
+      if (event && data) onEvent({ event, data: JSON.parse(data) } as ChatEvent);
+    }
+  }
+}
