@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import { ChatPanel } from "@/components/chat-panel";
 import { CitationPanel, RiskCard } from "@/components/risk-card";
 import { SummaryCard } from "@/components/summary-card";
 import { Badge } from "@/components/ui/badge";
@@ -175,6 +176,14 @@ export default function Home() {
       )}
 
       <CitationPanel citation={citation} onClose={() => setCitation(null)} />
+
+      {session && (
+        <ChatPanel
+          key={session.session_id}
+          sessionId={session.session_id}
+          onCite={setCitation}
+        />
+      )}
 
       {session && (
         <details className="group space-y-3">
