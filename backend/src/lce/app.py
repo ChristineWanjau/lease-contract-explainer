@@ -7,18 +7,25 @@ model itself.
 
 from __future__ import annotations
 
+import json
+import logging
 import uuid
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 from importlib.resources import files
 
 from fastapi import FastAPI, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from langchain_core.embeddings import Embeddings
 from langchain_core.language_models import BaseChatModel
 from pydantic import BaseModel
 
+from lce.analysis import DISCLAIMER, AnalysisError, summarize
 from lce.pdf import MAX_BYTES, UploadRejected, extract_pages
 from lce.splitter import Chunk, split_clauses
+
+logger = logging.getLogger(__name__)
 
 
 class ChunkOut(BaseModel):
@@ -40,6 +47,10 @@ class Session:
 
 def _load_sample_pdf() -> bytes:
     return files("lce").joinpath("data/sample_lease.pdf").read_bytes()
+
+
+def _sse(event: str, data: dict) -> str:
+    return f"event: {event}\ndata: {json.dumps(data)}\n\n"
 
 
 def create_app(
@@ -91,6 +102,30 @@ def create_app(
         if session is None:
             raise HTTPException(status_code=404, detail="Session not found")
         return to_out(session)
+
+    @app.get("/api/sessions/{session_id}/analyze")
+    def analyze(session_id: str) -> StreamingResponse:
+        session = sessions.get(session_id)
+        if session is None:
+            raise HTTPException(status_code=404, detail="Session not found")
+
+        def events() -> Iterator[str]:
+            try:
+                summary = summarize(llm, session.chunks)
+            except AnalysisError as e:
+                yield _sse("error", {"message": str(e)})
+                return
+            except Exception:
+                logger.exception("analysis failed")
+                yield _sse(
+                    "error",
+                    {"message": "The local model couldn't be reached. Is Ollama running?"},
+                )
+                return
+            yield _sse("summary", {"summary": summary.model_dump(), "disclaimer": DISCLAIMER})
+            yield _sse("done", {})
+
+        return StreamingResponse(events(), media_type="text/event-stream")
 
     @app.get("/api/health")
     def health() -> dict[str, str]:
