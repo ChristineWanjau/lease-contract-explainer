@@ -12,6 +12,49 @@ export type SessionOut = {
 export const API_URL =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
+export type Summary = {
+  parties: string[];
+  key_dates: string[];
+  payments: string[];
+  duration: string;
+  obligations: string[];
+};
+
+export type AnalysisEvent =
+  | { event: "summary"; data: { summary: Summary; disclaimer: string } }
+  | { event: "done"; data: Record<string, never> }
+  | { event: "error"; data: { message: string } };
+
+/** Stream the analysis of a session; calls onEvent for each Server-Sent Event. */
+export function streamAnalysis(
+  sessionId: string,
+  onEvent: (e: AnalysisEvent) => void,
+): () => void {
+  const source = new EventSource(
+    `${API_URL}/api/sessions/${sessionId}/analyze`,
+  );
+  source.addEventListener("summary", (msg) => {
+    onEvent({ event: "summary", data: JSON.parse(msg.data) });
+  });
+  source.addEventListener("done", () => {
+    source.close();
+    onEvent({ event: "done", data: {} });
+  });
+  // "error" is both the server's error event (has data) and the browser's
+  // connection-failure event (no data), so one listener handles both.
+  source.addEventListener("error", (msg) => {
+    source.close();
+    const data = (msg as MessageEvent).data;
+    onEvent({
+      event: "error",
+      data: data
+        ? JSON.parse(data)
+        : { message: "Lost connection to the backend. Is it running?" },
+    });
+  });
+  return () => source.close();
+}
+
 export async function loadSample(): Promise<SessionOut> {
   const res = await fetch(`${API_URL}/api/sample`, { method: "POST" });
   if (!res.ok) {

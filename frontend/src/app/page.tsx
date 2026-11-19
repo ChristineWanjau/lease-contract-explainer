@@ -1,7 +1,8 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
+import { SummaryCard } from "@/components/summary-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,19 +12,45 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { loadSample, uploadContract, type SessionOut } from "@/lib/api";
+import {
+  loadSample,
+  streamAnalysis,
+  uploadContract,
+  type SessionOut,
+  type Summary,
+} from "@/lib/api";
+
+type Analysis =
+  | { status: "running" }
+  | { status: "done"; summary: Summary; disclaimer: string }
+  | { status: "error"; message: string };
 
 export default function Home() {
   const [session, setSession] = useState<SessionOut | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
+
+  // Start the analysis whenever a new contract is loaded.
+  useEffect(() => {
+    if (!session) return;
+    return streamAnalysis(session.session_id, (e) => {
+      if (e.event === "summary") {
+        setAnalysis({ status: "done", ...e.data });
+      } else if (e.event === "error") {
+        setAnalysis({ status: "error", message: e.data.message });
+      }
+    });
+  }, [session]);
 
   async function run(load: () => Promise<SessionOut>) {
     setLoading(true);
     setError(null);
     try {
-      setSession(await load());
+      const loaded = await load();
+      setAnalysis({ status: "running" });
+      setSession(loaded);
     } catch (e) {
       setError(
         e instanceof Error
@@ -80,26 +107,51 @@ export default function Home() {
       )}
 
       {session && (
-        <section className="space-y-3" aria-label="Contract clauses">
-          <h2 className="text-lg font-medium">
+        <p
+          role="note"
+          className="rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200"
+        >
+          <strong>Not legal advice.</strong> This is an automated explanation
+          that may be incomplete or wrong. For important decisions, consult a
+          qualified lawyer.
+        </p>
+      )}
+
+      {analysis?.status === "running" && (
+        <p className="animate-pulse text-sm text-muted-foreground" aria-live="polite">
+          Reading your contract with the local model… this can take a minute or two.
+        </p>
+      )}
+      {analysis?.status === "error" && (
+        <p role="alert" className="text-sm text-destructive">
+          {analysis.message}
+        </p>
+      )}
+      {analysis?.status === "done" && <SummaryCard summary={analysis.summary} />}
+
+      {session && (
+        <details className="group space-y-3">
+          <summary className="cursor-pointer text-lg font-medium">
             Clauses ({session.chunks.length})
-          </h2>
-          {session.chunks.map((chunk, i) => (
-            <Card key={`${chunk.clause ?? "pre"}-${i}`}>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Badge variant="secondary">
-                    {chunk.clause ? `Clause ${chunk.clause}` : "Preamble"}
-                  </Badge>
-                  <CardDescription>p. {chunk.page}</CardDescription>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="whitespace-pre-line text-sm">{chunk.text}</p>
-              </CardContent>
-            </Card>
-          ))}
-        </section>
+          </summary>
+          <div className="mt-3 space-y-3">
+            {session.chunks.map((chunk, i) => (
+              <Card key={`${chunk.clause ?? "pre"}-${i}`}>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Badge variant="secondary">
+                      {chunk.clause ? `Clause ${chunk.clause}` : "Preamble"}
+                    </Badge>
+                    <CardDescription>p. {chunk.page}</CardDescription>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="whitespace-pre-line text-sm">{chunk.text}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </details>
       )}
     </main>
   );
