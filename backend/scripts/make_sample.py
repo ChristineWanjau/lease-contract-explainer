@@ -1,4 +1,4 @@
-"""Generate the fictional sample lease PDF used by "Try sample" and tests.
+"""Generate the fictional sample PDFs used by "Try sample" and tests.
 
 Run: uv run python scripts/make_sample.py
 """
@@ -9,7 +9,8 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus import PageBreak, Paragraph, SimpleDocTemplate, Spacer
 
-OUT = Path(__file__).resolve().parents[1] / "src" / "lce" / "data" / "sample_lease.pdf"
+DATA = Path(__file__).resolve().parents[1] / "src" / "lce" / "data"
+OUT = DATA / "sample_lease.pdf"
 
 PREAMBLE = [
     "SAMPLE RESIDENTIAL LEASE AGREEMENT",
@@ -57,22 +58,118 @@ PAGE_2 = [
     ("9. Governing Law", "This lease is governed by the laws of Sampletown."),
 ]
 
+# Fictional Kenyan employment contract. Planted contract risks (one per #16 category
+# where natural): probation, termination without a hearing, non-compete, deductions,
+# unpaid overtime, transfer, unilateral changes, ownership of work. The leave and
+# notice figures are deliberately low for the legal-rule checks in a later ticket.
+EMPLOYMENT_OUT = DATA / "sample_employment_ke.pdf"
 
-def build() -> None:
+EMPLOYMENT_PREAMBLE = [
+    "SAMPLE CONTRACT OF EMPLOYMENT",
+    "FICTIONAL DOCUMENT FOR DEMONSTRATION ONLY. All names, places and figures are invented.",
+    (
+        "This Contract is made between Example Traders Ltd of P.O. Box 00000, Nairobi "
+        "(the Employer) and Jane Example, ID No. 00000000 (the Employee)."
+    ),
+]
+
+EMPLOYMENT_PAGE_1 = [
+    (
+        "1. Position and Start Date",
+        "The Employee is employed as an Accounts Assistant starting on 1 February 2027.",
+    ),
+    (
+        "2. Probation",
+        (
+            "The first twelve months of employment are a probationary period, which the Employer "
+            "may extend at its sole discretion. During probation either party may end this "
+            "contract without notice."
+        ),
+    ),
+    (
+        "3. Salary",
+        "The Employee shall be paid a gross salary of KES 60,000 per month, payable in arrears.",
+    ),
+    (
+        "3.1 Deductions",
+        (
+            "The Employer may deduct from the Employee's salary any amount the Employer considers "
+            "owed by the Employee, including the cost of any lost or damaged company property."
+        ),
+    ),
+    (
+        "4. Working Hours",
+        (
+            "Normal working hours are 8am to 5pm, Monday to Saturday. The Employee shall work such "
+            "additional hours as the business requires, and the salary covers all hours worked."
+        ),
+    ),
+    ("5. Annual Leave", "The Employee is entitled to 14 working days of paid annual leave per year."),
+]
+
+EMPLOYMENT_PAGE_2 = [
+    (
+        "6. Place of Work",
+        (
+            "The Employee's place of work is Nairobi. The Employer may transfer the Employee to any "
+            "branch in Kenya at any time, and the Employee shall bear the cost of relocating."
+        ),
+    ),
+    (
+        "7. Termination",
+        (
+            "After probation, either party may end this contract by giving 7 days written notice. "
+            "The Employer may dismiss the Employee summarily for any reason it considers "
+            "sufficient, without a hearing."
+        ),
+    ),
+    (
+        "8. Confidentiality and Non-Competition",
+        (
+            "For three years after this contract ends, the Employee shall not work for or start any "
+            "business in Kenya that competes with the Employer."
+        ),
+    ),
+    (
+        "9. Intellectual Property",
+        (
+            "Everything the Employee creates, whether during working hours or not, belongs to the "
+            "Employer."
+        ),
+    ),
+    (
+        "10. Changes to this Contract",
+        "The Employer may change any term of this contract by posting a notice at the workplace.",
+    ),
+    ("11. Governing Law", "This contract is governed by the laws of Kenya."),
+]
+
+
+def _write(out: Path, title: str, preamble: list[str], pages: tuple[list, ...]) -> None:
     styles = getSampleStyleSheet()
-    story = [Paragraph(PREAMBLE[0], styles["Title"])]
-    story += [Paragraph(p, styles["Normal"]) for p in PREAMBLE[1:]]
+    story = [Paragraph(preamble[0], styles["Title"])]
+    story += [Paragraph(p, styles["Normal"]) for p in preamble[1:]]
     story.append(Spacer(1, 12))
-    for i, page in enumerate((PAGE_1, PAGE_2)):
+    for i, page in enumerate(pages):
         if i:
             story.append(PageBreak())
         for heading, body in page:
             story.append(Paragraph(f"<b>{heading}</b>", styles["Normal"]))
             story.append(Paragraph(body, styles["Normal"]))
             story.append(Spacer(1, 8))
-    OUT.parent.mkdir(parents=True, exist_ok=True)
-    SimpleDocTemplate(str(OUT), pagesize=A4, title="Sample Residential Lease").build(story)
-    print(f"wrote {OUT}")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    SimpleDocTemplate(str(out), pagesize=A4, title=title).build(story)
+    print(f"wrote {out}")
+
+
+def build() -> None:
+    _write(OUT, "Sample Residential Lease", PREAMBLE, (PAGE_1, PAGE_2))
+    _write(
+        EMPLOYMENT_OUT,
+        "Sample Contract of Employment",
+        EMPLOYMENT_PREAMBLE,
+        (EMPLOYMENT_PAGE_1, EMPLOYMENT_PAGE_2),
+    )
 
 
 if __name__ == "__main__":

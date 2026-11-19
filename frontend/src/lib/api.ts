@@ -6,18 +6,31 @@ export type Chunk = {
 
 export type SessionOut = {
   session_id: string;
+  pack: string;
+  /** What automatic detection chose on upload; null when the type was already known. */
+  detected: { pack: string; confidence: number } | null;
   chunks: Chunk[];
+};
+
+export type PackOut = {
+  id: string;
+  name: string;
+  sample_label: string;
 };
 
 export const API_URL =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
+export type SummaryField = {
+  name: string;
+  label: string;
+  kind: "single" | "list";
+};
+
+/** Values keyed by field name; shape depends on the active contract type pack. */
 export type Summary = {
-  parties: string[];
-  key_dates: string[];
-  payments: string[];
-  duration: string;
-  obligations: string[];
+  fields: SummaryField[];
+  values: Record<string, string | string[]>;
 };
 
 export type Citation = {
@@ -52,7 +65,18 @@ export function streamAnalysis(
     `${API_URL}/api/sessions/${sessionId}/analyze`,
   );
   source.addEventListener("summary", (msg) => {
-    onEvent({ event: "summary", data: JSON.parse(msg.data) });
+    const raw: {
+      summary: Summary["values"];
+      fields: SummaryField[];
+      disclaimer: string;
+    } = JSON.parse(msg.data);
+    onEvent({
+      event: "summary",
+      data: {
+        summary: { fields: raw.fields, values: raw.summary },
+        disclaimer: raw.disclaimer,
+      },
+    });
   });
   source.addEventListener("risk_flag", (msg) => {
     onEvent({ event: "risk_flag", data: JSON.parse(msg.data) });
@@ -76,11 +100,32 @@ export function streamAnalysis(
   return () => source.close();
 }
 
-export async function loadSample(): Promise<SessionOut> {
-  const res = await fetch(`${API_URL}/api/sample`, { method: "POST" });
-  if (!res.ok) {
-    throw new Error(`Could not load the sample contract (HTTP ${res.status}).`);
-  }
+async function errorMessage(res: Response, fallback: string): Promise<string> {
+  const data = await res.json().catch(() => null);
+  const message: unknown = data?.detail?.message;
+  return typeof message === "string" ? message : `${fallback} (HTTP ${res.status}).`;
+}
+
+export async function listPacks(): Promise<PackOut[]> {
+  const res = await fetch(`${API_URL}/api/packs`);
+  if (!res.ok) throw new Error(await errorMessage(res, "Could not load contract types"));
+  return res.json();
+}
+
+export async function loadSample(pack?: string): Promise<SessionOut> {
+  const query = pack ? `?pack=${encodeURIComponent(pack)}` : "";
+  const res = await fetch(`${API_URL}/api/sample${query}`, { method: "POST" });
+  if (!res.ok) throw new Error(await errorMessage(res, "Could not load the sample contract"));
+  return res.json();
+}
+
+export async function setPack(sessionId: string, pack: string): Promise<SessionOut> {
+  const res = await fetch(`${API_URL}/api/sessions/${sessionId}/pack`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ pack }),
+  });
+  if (!res.ok) throw new Error(await errorMessage(res, "Could not change the contract type"));
   return res.json();
 }
 
@@ -88,15 +133,7 @@ export async function uploadContract(file: File): Promise<SessionOut> {
   const body = new FormData();
   body.append("file", file);
   const res = await fetch(`${API_URL}/api/upload`, { method: "POST", body });
-  if (!res.ok) {
-    const data = await res.json().catch(() => null);
-    const message: unknown = data?.detail?.message;
-    throw new Error(
-      typeof message === "string"
-        ? message
-        : `Could not upload the contract (HTTP ${res.status}).`,
-    );
-  }
+  if (!res.ok) throw new Error(await errorMessage(res, "Could not upload the contract"));
   return res.json();
 }
 

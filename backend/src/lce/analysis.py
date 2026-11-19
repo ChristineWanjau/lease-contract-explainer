@@ -13,13 +13,13 @@ from __future__ import annotations
 import json
 import re
 from collections.abc import Iterator
-from importlib.resources import files
 from typing import Literal
 
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel, Field, ValidationError
 
+from lce.packs import Pack, RiskCategory
 from lce.splitter import Chunk
 
 DISCLAIMER = (
@@ -28,14 +28,6 @@ DISCLAIMER = (
 )
 
 MAX_ATTEMPTS = 2  # first try + one retry
-
-
-class Summary(BaseModel):
-    parties: list[str] = Field(description="Who is bound by the contract, with their role")
-    key_dates: list[str] = Field(description="Start, end, renewal and notice deadlines")
-    payments: list[str] = Field(description="Rent, salary, fees, deposits and amounts")
-    duration: str = Field(description="How long the contract lasts")
-    obligations: list[str] = Field(description="Main things the signer must do")
 
 
 class AnalysisError(Exception):
@@ -59,7 +51,7 @@ def _contract_text(chunks: list[Chunk]) -> str:
     return "\n\n".join(parts)
 
 
-def _parse_json(text: str) -> dict:
+def parse_json(text: str) -> dict:
     text = _THINK.sub("", text).strip()
     fenced = _FENCE.search(text)
     if fenced:
@@ -70,34 +62,24 @@ def _parse_json(text: str) -> dict:
     return json.loads(text[start : end + 1])
 
 
-def summarize(llm: BaseChatModel, chunks: list[Chunk]) -> Summary:
-    """Ask the model for a summary, validating against the schema with one retry."""
+def summarize(llm: BaseChatModel, chunks: list[Chunk], pack: Pack) -> dict:
+    """Ask the model for the pack's summary fields, validating with one retry."""
+    model = pack.summary_model()
     messages = [
-        SystemMessage(_SUMMARY_SYSTEM.format(schema=json.dumps(Summary.model_json_schema()))),
+        SystemMessage(_SUMMARY_SYSTEM.format(schema=json.dumps(model.model_json_schema()))),
         HumanMessage(f"Contract:\n\n{_contract_text(chunks)}"),
     ]
     last_error: Exception | None = None
     for _ in range(MAX_ATTEMPTS):
         reply = llm.invoke(messages)
         try:
-            return Summary.model_validate(_parse_json(str(reply.content)))
+            return model.model_validate(parse_json(str(reply.content))).model_dump()
         except (ValueError, ValidationError) as e:
             last_error = e
     raise AnalysisError("The model returned an invalid summary twice.") from last_error
 
 
 # ---------------------------------------------------------------- risk flags
-
-
-class RiskCategory(BaseModel):
-    id: str
-    label: str
-    description: str
-
-
-def load_risk_categories() -> list[RiskCategory]:
-    raw = json.loads(files("lce").joinpath("data/risk_categories.json").read_text())
-    return [RiskCategory.model_validate(c) for c in raw]
 
 
 class _ModelFlag(BaseModel):
@@ -157,7 +139,7 @@ def _classify_clause(
     for _ in range(MAX_ATTEMPTS):
         reply = llm.invoke(messages)
         try:
-            parsed = _ModelFlags.model_validate(_parse_json(str(reply.content)))
+            parsed = _ModelFlags.model_validate(parse_json(str(reply.content)))
             break
         except (ValueError, ValidationError) as e:
             last_error = e
