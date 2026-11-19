@@ -35,6 +35,7 @@ from lce.chat import (
     remember,
     stream_answer,
 )
+from lce.detect import Detected, detect_pack
 from lce.packs import Pack, load_packs
 from lce.pdf import MAX_BYTES, UploadRejected, extract_pages
 from lce.splitter import Chunk, split_clauses
@@ -51,6 +52,9 @@ class ChunkOut(BaseModel):
 class SessionOut(BaseModel):
     session_id: str
     pack: str
+    # What automatic detection chose, if it ran; None when the type was given or
+    # only one pack is configured.
+    detected: Detected | None = None
     chunks: list[ChunkOut]
 
 
@@ -135,14 +139,20 @@ def create_app(
             raise HTTPException(status_code=404, detail="Session not found")
         return session
 
-    def new_session(pdf_bytes: bytes, pack: Pack) -> SessionOut:
-        session = Session(
-            id=uuid.uuid4().hex,
-            pack=pack,
-            chunks=split_clauses(extract_pages(pdf_bytes)),
-        )
+    def new_session(pdf_bytes: bytes, pack: Pack | None) -> SessionOut:
+        """Create a session. With ``pack=None`` the type is detected automatically."""
+        chunks = split_clauses(extract_pages(pdf_bytes))
+        detected: Detected | None = None
+        if pack is None:
+            if len(loaded_packs) > 1:
+                pack, detected = detect_pack(llm, chunks, loaded_packs)
+            else:
+                pack = default_pack
+        session = Session(id=uuid.uuid4().hex, pack=pack, chunks=chunks)
         sessions[session.id] = session
-        return to_out(session)
+        out = to_out(session)
+        out.detected = detected
+        return out
 
     @app.get("/api/packs", response_model=list[PackOut])
     def list_packs() -> list[PackOut]:
@@ -150,6 +160,7 @@ def create_app(
 
     @app.post("/api/sample", response_model=SessionOut)
     def load_sample(pack: str | None = None) -> SessionOut:
+        # A sample's type is already known, so detection is skipped; it runs on uploads.
         chosen = find_pack(pack) if pack is not None else default_pack
         return new_session(chosen.sample_bytes(), chosen)
 
@@ -158,7 +169,7 @@ def create_app(
         # Read one byte past the limit so oversized files are detected without reading them fully.
         data = await file.read(MAX_BYTES + 1)
         try:
-            return new_session(data, default_pack)
+            return new_session(data, None)
         except UploadRejected as e:
             raise HTTPException(
                 status_code=e.status, detail={"code": e.code, "message": e.message}

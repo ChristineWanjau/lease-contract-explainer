@@ -51,7 +51,7 @@ def _contract_text(chunks: list[Chunk]) -> str:
     return "\n\n".join(parts)
 
 
-def _parse_json(text: str) -> dict:
+def parse_json(text: str) -> dict:
     text = _THINK.sub("", text).strip()
     fenced = _FENCE.search(text)
     if fenced:
@@ -73,7 +73,7 @@ def summarize(llm: BaseChatModel, chunks: list[Chunk], pack: Pack) -> dict:
     for _ in range(MAX_ATTEMPTS):
         reply = llm.invoke(messages)
         try:
-            return model.model_validate(_parse_json(str(reply.content))).model_dump()
+            return model.model_validate(parse_json(str(reply.content))).model_dump()
         except (ValueError, ValidationError) as e:
             last_error = e
     raise AnalysisError("The model returned an invalid summary twice.") from last_error
@@ -139,7 +139,7 @@ def _classify_clause(
     for _ in range(MAX_ATTEMPTS):
         reply = llm.invoke(messages)
         try:
-            parsed = _ModelFlags.model_validate(_parse_json(str(reply.content)))
+            parsed = _ModelFlags.model_validate(parse_json(str(reply.content)))
             break
         except (ValueError, ValidationError) as e:
             last_error = e

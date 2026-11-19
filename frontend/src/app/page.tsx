@@ -47,6 +47,9 @@ export default function Home() {
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [citation, setCitation] = useState<Citation | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
+  const packNames: Record<string, string> = Object.fromEntries(
+    packs.map((p) => [p.id, p.name]),
+  );
 
   useEffect(() => {
     listPacks()
@@ -153,24 +156,52 @@ export default function Home() {
       </div>
 
       {session && packs.length > 1 && (
-        <label className="flex flex-wrap items-center gap-2 text-sm">
-          <span className="font-medium">Contract type:</span>
-          <select
-            value={session.pack}
-            onChange={onTypeChosen}
-            disabled={loading}
-            className="rounded-md border bg-background px-2 py-1"
-          >
-            {packs.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
-          <span className="text-muted-foreground">
-            Changing it re-runs the analysis.
-          </span>
-        </label>
+        <div
+          role="status"
+          className="flex flex-wrap items-center gap-2 rounded-md border px-4 py-3 text-sm"
+        >
+          {session.detected ? (
+            <span>
+              {session.detected.pack === session.pack &&
+              session.detected.pack !== packs[0].id ? (
+                <>
+                  Looks like a{" "}
+                  <strong>{packNames[session.pack] ?? session.pack}</strong>.
+                </>
+              ) : session.detected.pack === session.pack ? (
+                <>
+                  Couldn&apos;t tell the contract type, so using{" "}
+                  <strong>{packNames[session.pack] ?? session.pack}</strong>.
+                </>
+              ) : (
+                <>
+                  Using <strong>{packNames[session.pack] ?? session.pack}</strong>.
+                </>
+              )}
+            </span>
+          ) : (
+            <span className="font-medium">Contract type:</span>
+          )}
+          <label className="flex items-center gap-2">
+            <span className={session.detected ? "text-muted-foreground" : "sr-only"}>
+              Change?
+            </span>
+            <select
+              value={session.pack}
+              onChange={onTypeChosen}
+              disabled={loading}
+              aria-label="Contract type"
+              className="rounded-md border bg-background px-2 py-1"
+            >
+              {packs.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <span className="text-muted-foreground">Changing it re-runs the analysis.</span>
+        </div>
       )}
 
       {error && (

@@ -7,6 +7,8 @@ export type Chunk = {
 export type SessionOut = {
   session_id: string;
   pack: string;
+  /** What automatic detection chose on upload; null when the type was already known. */
+  detected: { pack: string; confidence: number } | null;
   chunks: Chunk[];
 };
 
