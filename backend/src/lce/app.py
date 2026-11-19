@@ -50,7 +50,18 @@ class ChunkOut(BaseModel):
 
 class SessionOut(BaseModel):
     session_id: str
+    pack: str
     chunks: list[ChunkOut]
+
+
+class PackOut(BaseModel):
+    id: str
+    name: str
+    sample_label: str
+
+
+class PackIn(BaseModel):
+    pack: str
 
 
 @dataclass
@@ -88,6 +99,7 @@ def create_app(
     app.state.llm = llm
     app.state.embeddings = embeddings
     loaded_packs = load_packs(packs)  # raises InvalidPack, so a bad pack fails startup
+    packs_by_id = {p.id: p for p in loaded_packs}
     default_pack = loaded_packs[0]
     sessions: dict[str, Session] = {}  # in memory only, by design
 
@@ -101,28 +113,52 @@ def create_app(
     def to_out(session: Session) -> SessionOut:
         return SessionOut(
             session_id=session.id,
+            pack=session.pack.id,
             chunks=[ChunkOut(text=c.text, clause=c.clause, page=c.page) for c in session.chunks],
         )
 
-    def new_session(pdf_bytes: bytes) -> SessionOut:
+    def find_pack(pack_id: str) -> Pack:
+        pack = packs_by_id.get(pack_id)
+        if pack is None:
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "code": "unknown_pack",
+                    "message": f"Unknown contract type {pack_id!r}.",
+                },
+            )
+        return pack
+
+    def find_session(session_id: str) -> Session:
+        session = sessions.get(session_id)
+        if session is None:
+            raise HTTPException(status_code=404, detail="Session not found")
+        return session
+
+    def new_session(pdf_bytes: bytes, pack: Pack) -> SessionOut:
         session = Session(
             id=uuid.uuid4().hex,
-            pack=default_pack,
+            pack=pack,
             chunks=split_clauses(extract_pages(pdf_bytes)),
         )
         sessions[session.id] = session
         return to_out(session)
 
+    @app.get("/api/packs", response_model=list[PackOut])
+    def list_packs() -> list[PackOut]:
+        return [PackOut(id=p.id, name=p.name, sample_label=p.sample_label) for p in loaded_packs]
+
     @app.post("/api/sample", response_model=SessionOut)
-    def load_sample() -> SessionOut:
-        return new_session(default_pack.sample_bytes())
+    def load_sample(pack: str | None = None) -> SessionOut:
+        chosen = find_pack(pack) if pack is not None else default_pack
+        return new_session(chosen.sample_bytes(), chosen)
 
     @app.post("/api/upload", response_model=SessionOut)
     async def upload(file: UploadFile) -> SessionOut:
         # Read one byte past the limit so oversized files are detected without reading them fully.
         data = await file.read(MAX_BYTES + 1)
         try:
-            return new_session(data)
+            return new_session(data, default_pack)
         except UploadRejected as e:
             raise HTTPException(
                 status_code=e.status, detail={"code": e.code, "message": e.message}
@@ -130,9 +166,12 @@ def create_app(
 
     @app.get("/api/sessions/{session_id}", response_model=SessionOut)
     def get_session(session_id: str) -> SessionOut:
-        session = sessions.get(session_id)
-        if session is None:
-            raise HTTPException(status_code=404, detail="Session not found")
+        return to_out(find_session(session_id))
+
+    @app.put("/api/sessions/{session_id}/pack", response_model=SessionOut)
+    def set_pack(session_id: str, body: PackIn) -> SessionOut:
+        session = find_session(session_id)
+        session.pack = find_pack(body.pack)
         return to_out(session)
 
     @app.get("/api/sessions/{session_id}/analyze")
