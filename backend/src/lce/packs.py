@@ -14,7 +14,7 @@ from typing import Literal
 from pydantic import BaseModel, Field, ValidationError, create_model, field_validator
 
 DATA = files("lce").joinpath("data")
-BUNDLED_PACKS = ("general",)
+BUNDLED_PACKS = ("general", "kenya_employment")  # the first is the default
 
 
 class InvalidPack(ValueError):
@@ -38,6 +38,7 @@ class Pack(BaseModel):
     id: str = Field(pattern=r"^[a-z][a-z0-9_]*$")
     name: str
     description: str
+    sample_label: str = "Sample contract"
     summary_fields: list[SummaryField] = Field(min_length=1)
     risk_categories: list[RiskCategory] = Field(min_length=1)
     sample: str

@@ -168,7 +168,7 @@ def test_duplicate_pack_ids_are_rejected():
         load_packs([TEST_PACK, TEST_PACK])
 
 
-def test_the_bundled_packs_are_valid():
+def test_the_bundled_packs_are_valid_and_general_is_the_default():
     packs = load_packs()
 
-    assert [p.id for p in packs] == ["general"]
+    assert packs[0].id == "general"

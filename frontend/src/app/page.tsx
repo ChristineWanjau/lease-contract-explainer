@@ -15,10 +15,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
+  listPacks,
   loadSample,
+  setPack,
   streamAnalysis,
   uploadContract,
   type Citation,
+  type PackOut,
   type RiskFlag,
   type SessionOut,
   type Summary,
@@ -36,16 +39,26 @@ const START: Analysis = { stage: "summarizing", summary: null, flags: [], skippe
 
 export default function Home() {
   const [session, setSession] = useState<SessionOut | null>(null);
+  const [packs, setPacks] = useState<PackOut[]>([]);
+  // Bumped to re-run the analysis on the same session (e.g. after changing type).
+  const [runId, setRunId] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [citation, setCitation] = useState<Citation | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
-  // Start the analysis whenever a new contract is loaded.
   useEffect(() => {
-    if (!session) return;
-    return streamAnalysis(session.session_id, (e) => {
+    listPacks()
+      .then(setPacks)
+      .catch(() => setPacks([])); // backend down: upload/sample will show the error
+  }, []);
+
+  // Start the analysis whenever a contract is loaded or its type changes.
+  const sessionId = session?.session_id;
+  useEffect(() => {
+    if (!sessionId) return;
+    return streamAnalysis(sessionId, (e) => {
       setAnalysis((a) => {
         const prev = a ?? START;
         switch (e.event) {
@@ -60,7 +73,7 @@ export default function Home() {
         }
       });
     });
-  }, [session]);
+  }, [sessionId, runId]);
 
   async function run(load: () => Promise<SessionOut>) {
     setLoading(true);
@@ -70,6 +83,7 @@ export default function Home() {
       setAnalysis(START);
       setCitation(null);
       setSession(loaded);
+      setRunId((n) => n + 1);
     } catch (e) {
       setError(
         e instanceof Error
@@ -79,6 +93,14 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
+  }
+
+  function onTypeChosen(e: React.ChangeEvent<HTMLSelectElement>) {
+    if (!session || e.target.value === session.pack) return;
+    const id = session.session_id;
+    const pack = e.target.value;
+    // Same session and chat, new type: re-run the analysis and replace the results.
+    run(() => setPack(id, pack));
   }
 
   function onFileChosen(e: React.ChangeEvent<HTMLInputElement>) {
@@ -111,13 +133,45 @@ export default function Home() {
           aria-label="Upload a contract PDF"
           onChange={onFileChosen}
         />
-        <Button variant="outline" onClick={() => run(loadSample)} disabled={loading}>
+        <Button variant="outline" onClick={() => run(() => loadSample())} disabled={loading}>
           {loading ? "Loading…" : "Try sample"}
         </Button>
+        {packs.length > 1 &&
+          packs.slice(1).map((p) => (
+            <Button
+              key={p.id}
+              variant="outline"
+              onClick={() => run(() => loadSample(p.id))}
+              disabled={loading}
+            >
+              Try: {p.sample_label}
+            </Button>
+          ))}
         <span className="text-sm text-muted-foreground">
-          Text PDFs up to 30 pages / 10 MB. Or try a fictional lease.
+          Text PDFs up to 30 pages / 10 MB. Or try a fictional sample.
         </span>
       </div>
+
+      {session && packs.length > 1 && (
+        <label className="flex flex-wrap items-center gap-2 text-sm">
+          <span className="font-medium">Contract type:</span>
+          <select
+            value={session.pack}
+            onChange={onTypeChosen}
+            disabled={loading}
+            className="rounded-md border bg-background px-2 py-1"
+          >
+            {packs.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+          <span className="text-muted-foreground">
+            Changing it re-runs the analysis.
+          </span>
+        </label>
+      )}
 
       {error && (
         <p role="alert" className="text-sm text-destructive">

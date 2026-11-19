@@ -1,0 +1,105 @@
+{
+  "id": "kenya_employment",
+  "name": "Kenyan employment contract",
+  "description": "A contract of employment between an employer and an employee in Kenya: job title, salary, working hours, leave, probation, termination and similar terms",
+  "sample_label": "Fictional Kenyan employment contract",
+  "summary_fields": [
+    {
+      "name": "employer_and_employee",
+      "label": "Employer and employee",
+      "description": "Who the employer and the employee are",
+      "kind": "list"
+    },
+    {
+      "name": "job_title",
+      "label": "Job title",
+      "description": "The employee's position or role",
+      "kind": "single"
+    },
+    {
+      "name": "start_date_and_term",
+      "label": "Start date and term",
+      "description": "When employment starts, and whether it is permanent or for a fixed term",
+      "kind": "single"
+    },
+    {
+      "name": "probation",
+      "label": "Probation",
+      "description": "Length and terms of any probation period",
+      "kind": "single"
+    },
+    {
+      "name": "salary",
+      "label": "Salary",
+      "description": "Pay amount, frequency, and any allowances or benefits",
+      "kind": "single"
+    },
+    {
+      "name": "working_hours",
+      "label": "Working hours",
+      "description": "Normal hours and days of work, and how overtime is handled",
+      "kind": "single"
+    },
+    {
+      "name": "leave",
+      "label": "Leave",
+      "description": "Annual, sick, maternity, paternity and any other leave stated",
+      "kind": "list"
+    },
+    {
+      "name": "notice_period",
+      "label": "Notice period",
+      "description": "Notice either side must give to end the contract",
+      "kind": "single"
+    },
+    {
+      "name": "your_obligations",
+      "label": "Your obligations",
+      "description": "Main things the employee must do or must not do",
+      "kind": "list"
+    }
+  ],
+  "risk_categories": [
+    {
+      "id": "probation",
+      "label": "Probation terms",
+      "description": "Long, extendable or one-sided probation, or termination during probation without notice"
+    },
+    {
+      "id": "termination",
+      "label": "Notice and termination",
+      "description": "Short notice, termination at the employer's discretion, or dismissal without a hearing"
+    },
+    {
+      "id": "restrictive_covenant",
+      "label": "Non-compete / confidentiality after leaving",
+      "description": "Restrictions on where or for whom the employee can work, or what they can disclose, after the job ends"
+    },
+    {
+      "id": "pay_deductions",
+      "label": "Pay deductions",
+      "description": "The employer can deduct from or set off against salary, especially at its own discretion"
+    },
+    {
+      "id": "overtime",
+      "label": "Unpaid or open-ended overtime",
+      "description": "Extra hours required without extra pay, or no limit on working hours"
+    },
+    {
+      "id": "transfer",
+      "label": "Transfer or relocation",
+      "description": "The employer can move the employee to another place or role, especially at the employee's cost"
+    },
+    {
+      "id": "unilateral_changes",
+      "label": "Employer changes terms alone",
+      "description": "The employer can change the contract without the employee's agreement"
+    },
+    {
+      "id": "work_ownership",
+      "label": "Ownership of your work",
+      "description": "The employer claims ownership of the employee's work or inventions, especially outside working hours"
+    }
+  ],
+  "sample": "sample_employment_ke.pdf"
+}

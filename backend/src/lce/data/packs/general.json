@@ -2,6 +2,7 @@
   "id": "general",
   "name": "General contract",
   "description": "Any contract or lease that doesn't match a more specific type",
+  "sample_label": "Fictional residential lease",
   "summary_fields": [
     {
       "name": "parties",
