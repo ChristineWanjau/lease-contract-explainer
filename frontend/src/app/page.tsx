@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { ChatPanel } from "@/components/chat-panel";
-import { CitationPanel, RiskCard } from "@/components/risk-card";
+import { CitationPanel, MissingItemCard, RiskCard } from "@/components/risk-card";
 import { SummaryCard } from "@/components/summary-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,7 @@ import {
   streamAnalysis,
   uploadContract,
   type Citation,
+  type MissingItem,
   type PackOut,
   type RiskFlag,
   type SessionOut,
@@ -31,11 +32,20 @@ type Analysis = {
   stage: "summarizing" | "scanning" | "done" | "error";
   summary: Summary | null;
   flags: RiskFlag[];
+  missing: MissingItem[];
   skipped: (string | null)[];
+  skippedRules: string[];
   message?: string;
 };
 
-const START: Analysis = { stage: "summarizing", summary: null, flags: [], skipped: [] };
+const START: Analysis = {
+  stage: "summarizing",
+  summary: null,
+  flags: [],
+  missing: [],
+  skipped: [],
+  skippedRules: [],
+};
 
 export default function Home() {
   const [session, setSession] = useState<SessionOut | null>(null);
@@ -69,8 +79,15 @@ export default function Home() {
             return { ...prev, stage: "scanning", summary: e.data.summary };
           case "risk_flag":
             return { ...prev, flags: [...prev.flags, e.data] };
+          case "missing_item":
+            return { ...prev, missing: [...prev.missing, e.data] };
           case "done":
-            return { ...prev, stage: "done", skipped: e.data.skipped_clauses };
+            return {
+              ...prev,
+              stage: "done",
+              skipped: e.data.skipped_clauses,
+              skippedRules: e.data.skipped_rules,
+            };
           case "error":
             return { ...prev, stage: "error", message: e.data.message };
         }
@@ -255,6 +272,26 @@ export default function Home() {
             <p className="text-sm text-muted-foreground">
               Couldn&apos;t check:{" "}
               {analysis.skipped.map((c) => (c ? `Clause ${c}` : "Preamble")).join(", ")}.
+            </p>
+          )}
+        </section>
+      )}
+
+      {analysis && (analysis.missing.length > 0 || analysis.skippedRules.length > 0) && (
+        <section className="space-y-3" aria-label="Missing from your contract" aria-live="polite">
+          <h2 className="text-lg font-medium">
+            Missing from your contract ({analysis.missing.length})
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            The law expects these, but your contract says nothing about them.
+          </p>
+          {analysis.missing.map((item) => (
+            <MissingItemCard key={item.rule} item={item} />
+          ))}
+          {analysis.skippedRules.length > 0 && (
+            <p className="text-sm text-muted-foreground">
+              Couldn&apos;t check {analysis.skippedRules.length} legal requirement
+              {analysis.skippedRules.length === 1 ? "" : "s"} for missing terms.
             </p>
           )}
         </section>
