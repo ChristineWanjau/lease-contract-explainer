@@ -172,3 +172,8 @@ def test_the_bundled_packs_are_valid_and_general_is_the_default():
     packs = load_packs()
 
     assert packs[0].id == "general"
+
+
+def test_a_pack_needs_at_least_one_example_question():
+    with pytest.raises(InvalidPack):
+        load_packs([dict(TEST_PACK, example_questions=[])])

@@ -3,6 +3,10 @@
   "name": "Kenyan employment contract",
   "description": "A contract of employment between an employer and an employee in Kenya: job title, salary, working hours, leave, probation, termination and similar terms",
   "sample_label": "Fictional Kenyan employment contract",
+  "example_questions": [
+    "How much notice do I have to give?",
+    "Can my salary be deducted?"
+  ],
   "summary_fields": [
     {
       "name": "employer_and_employee",

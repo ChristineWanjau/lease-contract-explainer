@@ -16,6 +16,7 @@ export type PackOut = {
   id: string;
   name: string;
   sample_label: string;
+  example_questions: string[];
 };
 
 export const API_URL =

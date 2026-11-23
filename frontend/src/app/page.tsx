@@ -266,6 +266,7 @@ export default function Home() {
         <ChatPanel
           key={session.session_id}
           sessionId={session.session_id}
+          examples={packs.find((p) => p.id === session.pack)?.example_questions ?? []}
           onCite={setCitation}
         />
       )}

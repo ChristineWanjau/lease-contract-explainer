@@ -3,6 +3,10 @@
   "name": "General contract",
   "description": "Any contract or lease that doesn't match a more specific type",
   "sample_label": "Fictional residential lease",
+  "example_questions": [
+    "Can I lose my deposit?",
+    "What happens if I leave early?"
+  ],
   "summary_fields": [
     {
       "name": "parties",

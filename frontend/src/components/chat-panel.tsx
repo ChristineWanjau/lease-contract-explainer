@@ -21,9 +21,12 @@ type Message =
 
 export function ChatPanel({
   sessionId,
+  examples,
   onCite,
 }: {
   sessionId: string;
+  /** Starter questions for the active contract type. */
+  examples: string[];
   onCite: (c: Citation) => void;
 }) {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -81,10 +84,24 @@ export function ChatPanel({
       </CardHeader>
       <CardContent className="space-y-4">
         {messages.length === 0 && (
-          <p className="text-sm text-muted-foreground">
-            For example: &ldquo;Can I lose my deposit?&rdquo; or &ldquo;What happens if I
-            leave early?&rdquo; Answers only use your contract and cite the clause.
-          </p>
+          <div className="space-y-2 text-sm text-muted-foreground">
+            {examples.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2">
+                <span>For example:</span>
+                {examples.map((q) => (
+                  <button
+                    key={q}
+                    type="button"
+                    onClick={() => setQuestion(q)}
+                    className="rounded-full border px-3 py-1 text-foreground hover:bg-muted"
+                  >
+                    {q}
+                  </button>
+                ))}
+              </div>
+            )}
+            <p>Answers only use your contract and cite the clause.</p>
+          </div>
         )}
         <ol className="space-y-3" aria-live="polite">
           {messages.map((m, i) =>
