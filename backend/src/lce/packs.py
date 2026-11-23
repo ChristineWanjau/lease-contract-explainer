@@ -8,10 +8,18 @@ built, so a broken pack fails startup instead of failing mid-analysis.
 from __future__ import annotations
 
 import json
+from datetime import date
 from importlib.resources import files
 from typing import Literal
 
-from pydantic import BaseModel, Field, ValidationError, create_model, field_validator
+from pydantic import (
+    BaseModel,
+    Field,
+    ValidationError,
+    create_model,
+    field_validator,
+    model_validator,
+)
 
 DATA = files("lce").joinpath("data")
 BUNDLED_PACKS = ("general", "kenya_employment")  # the first is the default
@@ -34,6 +42,50 @@ class RiskCategory(BaseModel):
     description: str
 
 
+# Marks legal details not yet taken from the Act. A rule containing it must stay
+# a placeholder, and placeholder rules are never shown to the model or the user.
+PLACEHOLDER = "TO FILL FROM ACT"
+
+
+class LegalRule(BaseModel):
+    """A hand-written legal requirement. All legal details come from here, never the model."""
+
+    id: str = Field(pattern=r"^[a-z][a-z0-9_]*$")
+    topic: str
+    # contradiction: a clause conflicts with the requirement (checked per clause)
+    # missing: the contract says nothing about it (checked against the whole contract)
+    check: Literal["contradiction", "missing"]
+    severity: Literal["high", "medium", "low"]
+    act: str
+    section: str
+    requirement: str
+    question: str
+    link: str = Field(pattern=r"^https://")
+    status: Literal["placeholder", "active"]
+    verified: bool = False  # reviewed by a qualified professional
+    last_reviewed: date | None = None
+
+    @model_validator(mode="after")
+    def consistent(self) -> LegalRule:
+        filled = (self.act, self.section, self.requirement, self.question)
+        if self.status == "active" and any(PLACEHOLDER in v for v in filled):
+            raise ValueError(f"rule {self.id!r} is active but still contains {PLACEHOLDER!r}")
+        if self.verified and self.status != "active":
+            raise ValueError(f"rule {self.id!r} is verified but not active")
+        if self.verified and self.last_reviewed is None:
+            raise ValueError(f"rule {self.id!r} is verified but has no last_reviewed date")
+        return self
+
+    def legal(self) -> dict:
+        return {
+            "act": self.act,
+            "section": self.section,
+            "link": self.link,
+            "verified": self.verified,
+            "last_reviewed": self.last_reviewed.isoformat() if self.last_reviewed else None,
+        }
+
+
 class Pack(BaseModel):
     id: str = Field(pattern=r"^[a-z][a-z0-9_]*$")
     name: str
@@ -46,7 +98,21 @@ class Pack(BaseModel):
     )
     summary_fields: list[SummaryField] = Field(min_length=1)
     risk_categories: list[RiskCategory] = Field(min_length=1)
+    legal_rules: list[LegalRule] = []
     sample: str
+
+    @model_validator(mode="after")
+    def unique_rule_ids(self) -> Pack:
+        ids = [r.id for r in self.legal_rules]
+        if len(ids) != len(set(ids)):
+            raise ValueError("legal rule ids must be unique")
+        clash = set(ids) & {c.id for c in self.risk_categories}
+        if clash:
+            raise ValueError(f"legal rule ids clash with risk category ids: {sorted(clash)}")
+        return self
+
+    def active_rules(self, check: str) -> list[LegalRule]:
+        return [r for r in self.legal_rules if r.status == "active" and r.check == check]
 
     @field_validator("summary_fields")
     @classmethod

@@ -42,19 +42,44 @@ export type Citation = {
 
 export type Severity = "high" | "medium" | "low";
 
+/** Where a legal requirement comes from. Always from configuration, never the model. */
+export type LegalSource = {
+  act: string;
+  section: string;
+  link: string;
+  verified: boolean;
+  last_reviewed: string | null;
+};
+
 export type RiskFlag = {
+  kind: "contract_risk" | "legal_rule";
   category: string;
   category_label: string;
   severity: Severity;
   explanation: string;
   question_to_ask: string;
   citations: Citation[];
+  legal: LegalSource | null;
+};
+
+/** A legal requirement the contract says nothing about: cites the Act, not a clause. */
+export type MissingItem = {
+  rule: string;
+  topic: string;
+  severity: Severity;
+  requirement: string;
+  question_to_ask: string;
+  legal: LegalSource;
 };
 
 export type AnalysisEvent =
   | { event: "summary"; data: { summary: Summary; disclaimer: string } }
   | { event: "risk_flag"; data: RiskFlag }
-  | { event: "done"; data: { skipped_clauses: (string | null)[] } }
+  | { event: "missing_item"; data: MissingItem }
+  | {
+      event: "done";
+      data: { skipped_clauses: (string | null)[]; skipped_rules: string[] };
+    }
   | { event: "error"; data: { message: string } };
 
 /** Stream the analysis of a session; calls onEvent for each Server-Sent Event. */
@@ -81,6 +106,9 @@ export function streamAnalysis(
   });
   source.addEventListener("risk_flag", (msg) => {
     onEvent({ event: "risk_flag", data: JSON.parse(msg.data) });
+  });
+  source.addEventListener("missing_item", (msg) => {
+    onEvent({ event: "missing_item", data: JSON.parse(msg.data) });
   });
   source.addEventListener("done", (msg) => {
     source.close();

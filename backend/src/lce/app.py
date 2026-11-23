@@ -25,6 +25,7 @@ from lce.analysis import (
     DISCLAIMER,
     AnalysisError,
     RiskScanResult,
+    find_missing,
     find_risks,
     summarize,
 )
@@ -140,6 +141,16 @@ def create_app(
             raise HTTPException(status_code=404, detail="Session not found")
         return session
 
+    def search_for(session: Session):
+        """Clause retrieval for this session, sharing the chat's lazily built index."""
+
+        def search(query: str, k: int) -> list[Chunk]:
+            if session.index is None:
+                session.index = ContractIndex(session.chunks, embeddings)
+            return session.index.search(query, k=k)
+
+        return search
+
     def new_session(pdf_bytes: bytes, pack: Pack | None) -> SessionOut:
         """Create a session. With ``pack=None`` the type is detected automatically."""
         chunks = split_clauses(extract_pages(pdf_bytes))
@@ -216,8 +227,10 @@ def create_app(
                     },
                 )
                 scan = RiskScanResult()
-                for flag in find_risks(llm, session.chunks, pack.risk_categories, scan):
+                for flag in find_risks(llm, session.chunks, pack, scan):
                     yield _sse("risk_flag", flag.model_dump())
+                for item in find_missing(llm, session.chunks, pack, scan, search_for(session)):
+                    yield _sse("missing_item", item.model_dump())
             except AnalysisError as e:
                 yield _sse("error", {"message": str(e)})
                 return
@@ -228,7 +241,10 @@ def create_app(
                     {"message": "The local model couldn't be reached. Is Ollama running?"},
                 )
                 return
-            yield _sse("done", {"skipped_clauses": scan.skipped_clauses})
+            yield _sse(
+                "done",
+                {"skipped_clauses": scan.skipped_clauses, "skipped_rules": scan.skipped_rules},
+            )
 
         return StreamingResponse(events(), media_type="text/event-stream")
 
