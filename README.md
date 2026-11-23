@@ -6,7 +6,7 @@
 
 > The live demo replays **pre-recorded results** from two fictional sample contracts, so it needs no server or model. The full app runs locally with [Ollama](https://ollama.com), so a real contract never leaves your computer. See [Run it locally](#run-it-locally).
 
-<!-- Replace with a recording of the demo: docs/demo.gif -->
+![Demo: loading a sample contract, risk flags streaming in, and a cited chat answer](docs/demo.gif)
 
 > ⚠️ **Not legal advice.** This is an automated explanation that may be incomplete or wrong. For important decisions, consult a qualified lawyer.
 
@@ -32,76 +32,64 @@
 
 ## Architecture
 
-### System overview
-
 ```mermaid
-flowchart LR
-    subgraph Local["Your machine (full app)"]
-        UI["Next.js UI<br/>upload · summary · risk cards<br/>missing items · chat · citations"]
-        subgraph API["FastAPI backend"]
-            ROUTES["Endpoints<br/>/upload · /sample · /analyze (SSE) · /chat (SSE)"]
-            PIPE["LangChain pipeline<br/>detect · summarise · classify · retrieve · answer"]
-            SESS[("In-memory sessions<br/>clauses · vector index · chat history")]
-            PACKS[["Contract type packs<br/>(JSON config)"]]
-        end
-        subgraph Ollama["Ollama"]
-            LLM["qwen3:8b"]
-            EMB["nomic-embed-text"]
-        end
+flowchart TB
+    subgraph Browser["Browser · Next.js 16 · React 19 · Tailwind · shadcn/ui"]
+        UI["Single-page UI<br/>upload · summary · risk cards · missing items<br/>cited chat · citation panel"]
     end
 
-    subgraph Pages["GitHub Pages (live demo)"]
-        DEMO["Same Next.js UI, static export<br/>replays recordings.json"]
+    subgraph Backend["FastAPI backend · Python · uv"]
+        API["Endpoints<br/>/upload · /sample · /analyze · /chat<br/>results streamed over Server-Sent Events"]
+
+        subgraph Ingest["Ingestion"]
+            PDF["pypdf<br/>validate · extract text per page"]
+            SPLIT["Clause-aware splitter<br/>1. · 2.3 · Clause 4 · Section 5"]
+        end
+
+        subgraph Pipeline["LangChain pipeline · Pydantic-validated JSON, one retry"]
+            DETECT["Detect contract type<br/>confidence ≥ 0.7, else General"]
+            SUMMARY["Summarise<br/>fields defined by the pack"]
+            CLASSIFY["Classify each clause<br/>risk checklist + legal rules"]
+            MISSING["Missing-item check<br/>legal requirements not covered"]
+            subgraph RAG["RAG chat"]
+                RETRIEVE["Embed question<br/>top 4 clauses from InMemoryVectorStore"]
+                ANSWER["Answer only from numbered excerpts<br/>citations resolved to verbatim clauses<br/>none cited → 'The contract doesn't say'"]
+            end
+        end
+
+        PACKS[["Contract type packs (JSON)<br/>summary fields · risk checklist · legal rules"]]
+        SESS[("In-memory session<br/>clauses · vector index · chat history")]
     end
 
-    UI -- "PDF, questions" --> ROUTES
-    ROUTES -- "Server-Sent Events" --> UI
-    ROUTES --> PIPE
-    PIPE <--> SESS
-    PIPE --> PACKS
-    PIPE --> LLM
-    PIPE --> EMB
-    PIPE -. "make record-demo" .-> DEMO
+    subgraph Ollama["Ollama · runs on your machine"]
+        LLM["qwen3:8b<br/>chat model"]
+        EMB["nomic-embed-text<br/>embeddings"]
+    end
+
+    subgraph Pages["GitHub Pages · live demo"]
+        DEMO["Same UI as a static export<br/>replays recordings.json · no server or model"]
+    end
+
+    UI -- "PDF · questions" --> API
+    API -- "SSE: summary · risk_flag · missing_item · tokens" --> UI
+    API --> PDF --> SPLIT --> SESS
+    API --> DETECT & SUMMARY & CLASSIFY & MISSING & RETRIEVE
+    RETRIEVE --> ANSWER
+    PACKS -.-> DETECT & SUMMARY & CLASSIFY & MISSING
+    SESS -.-> Pipeline
+    DETECT & SUMMARY & CLASSIFY & MISSING & ANSWER --> LLM
+    RETRIEVE --> EMB
+    Pipeline -. "make record-demo" .-> DEMO
 ```
 
-The app is built by `create_app(llm=..., embeddings=...)`. Production passes Ollama models; tests pass fakes. The same factory makes swapping in any other LangChain chat model a one-line change.
+**How a contract flows through it**
 
-### RAG chat flow
+1. **Ingest:** the PDF is validated (10 MB, 30 pages, readable, has selectable text) and split into clauses with their page numbers.
+2. **Detect:** the model picks a contract type from the configured packs. Below 0.7 confidence it falls back to General.
+3. **Analyse:** a summary with the pack's fields, then one model call per clause for risks and legal rules, then a check for required items the contract leaves out. Each result streams to the browser as soon as it's ready.
+4. **Chat (RAG):** clauses are embedded once; each question retrieves the 4 most relevant, and the model answers only from them. Its `[n]` references are resolved back to the stored clauses, so quotes are always verbatim.
 
-```mermaid
-flowchart TD
-    Q["Question"] --> E["Embed question<br/>(nomic-embed-text)"]
-    C["Contract clauses"] -- "first question only" --> IDX[("Vector index<br/>InMemoryVectorStore")]
-    E --> S["Similarity search:<br/>top 4 clauses"]
-    IDX --> S
-    S --> P["Prompt: numbered excerpts [1]–[4]<br/>+ last 6 turns of history<br/>+ 'answer only from the excerpts'"]
-    P --> M["qwen3:8b<br/>(streamed token by token)"]
-    M --> R{"Does the answer cite<br/>a retrieved excerpt?"}
-    R -- "yes" --> CITE["Resolve [n] to the stored clause<br/>renumber to match citations<br/>quote = verbatim clause text"]
-    R -- "no" --> NO["Replace with<br/>'The contract doesn't say'"]
-    CITE --> OUT["Answer + clickable citations"]
-    NO --> OUT
-```
-
-### Analysis pipeline
-
-```mermaid
-flowchart TD
-    PDF["PDF upload"] --> V{"Validate<br/>≤10 MB · ≤30 pages<br/>readable · has text"}
-    V -- "rejected" --> ERR["Clear error<br/>(e.g. scanned PDF)"]
-    V --> X["Extract text per page<br/>(pypdf)"]
-    X --> SP["Clause-aware splitter<br/>1. · 2.3 · Clause 4 · Section 5<br/>fallback: overlapping chunks"]
-    SP --> D["Detect contract type<br/>confidence ≥ 0.7 or General"]
-    D --> SUM["Summary<br/>fields defined by the pack"]
-    SUM --> RISK["For each clause:<br/>risk checklist + legal rules"]
-    RISK --> MISS["Missing-item check<br/>whole contract, or per rule<br/>via retrieval if over 24k chars"]
-    MISS --> DONE["done<br/>(skipped clauses / rules)"]
-    SUM -. "SSE: summary" .-> B["Browser"]
-    RISK -. "SSE: risk_flag" .-> B
-    MISS -. "SSE: missing_item" .-> B
-```
-
-Each clause is reviewed in its own model call, so one clause's bad output is retried once and then skipped and reported, instead of failing the whole analysis.
+The models are passed into `create_app(llm=..., embeddings=...)`. Production uses Ollama; the 120 tests use LangChain's fake models, so CI needs no model. Swapping in another LangChain chat model is a one-line change.
 
 ---
 
