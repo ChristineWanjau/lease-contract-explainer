@@ -6,6 +6,7 @@ import { citationLabel } from "@/components/risk-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DEMO, REPO_URL } from "@/demo/demo";
 import { askQuestion, type Citation } from "@/lib/api";
 
 type Message =
@@ -49,8 +50,12 @@ export function ChatPanel({
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     const q = question.trim();
-    if (!q || busy) return;
     setQuestion("");
+    await ask(q);
+  }
+
+  async function ask(q: string) {
+    if (!q || busy) return;
     setBusy(true);
     setMessages((ms) => [
       ...ms,
@@ -83,24 +88,28 @@ export function ChatPanel({
         <CardTitle>Ask about this contract</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {messages.length === 0 && (
+        {/* Demo: the recorded questions are the only ones available, so keep them visible. */}
+        {(messages.length === 0 || DEMO) && (
           <div className="space-y-2 text-sm text-muted-foreground">
             {examples.length > 0 && (
               <div className="flex flex-wrap items-center gap-2">
-                <span>For example:</span>
+                <span>{DEMO ? "Try:" : "For example:"}</span>
                 {examples.map((q) => (
                   <button
                     key={q}
                     type="button"
-                    onClick={() => setQuestion(q)}
-                    className="rounded-full border px-3 py-1 text-foreground hover:bg-muted"
+                    disabled={busy}
+                    onClick={() => (DEMO ? ask(q) : setQuestion(q))}
+                    className="rounded-full border px-3 py-1 text-foreground hover:bg-muted disabled:opacity-50"
                   >
                     {q}
                   </button>
                 ))}
               </div>
             )}
-            <p>Answers only use your contract and cite the clause.</p>
+            {messages.length === 0 && (
+              <p>Answers only use your contract and cite the clause.</p>
+            )}
           </div>
         )}
         <ol className="space-y-3" aria-live="polite">
@@ -132,19 +141,29 @@ export function ChatPanel({
             ),
           )}
         </ol>
-        <form onSubmit={onSubmit} className="flex gap-2">
-          <input
-            value={question}
-            onChange={(e) => setQuestion(e.target.value)}
-            placeholder="Ask a question about your contract…"
-            aria-label="Your question"
-            maxLength={2000}
-            className="flex-1 rounded-md border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          />
-          <Button type="submit" disabled={busy || !question.trim()}>
-            {busy ? "Answering…" : "Ask"}
-          </Button>
-        </form>
+        {DEMO ? (
+          <p className="text-sm text-muted-foreground">
+            The demo has recorded answers only.{" "}
+            <a href={REPO_URL} className="underline underline-offset-2">
+              Run it locally
+            </a>{" "}
+            to ask your own questions.
+          </p>
+        ) : (
+          <form onSubmit={onSubmit} className="flex gap-2">
+            <input
+              value={question}
+              onChange={(e) => setQuestion(e.target.value)}
+              placeholder="Ask a question about your contract…"
+              aria-label="Your question"
+              maxLength={2000}
+              className="flex-1 rounded-md border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
+            <Button type="submit" disabled={busy || !question.trim()}>
+              {busy ? "Answering…" : "Ask"}
+            </Button>
+          </form>
+        )}
       </CardContent>
     </Card>
   );

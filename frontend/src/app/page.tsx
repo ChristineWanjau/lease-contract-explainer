@@ -27,6 +27,7 @@ import {
   type SessionOut,
   type Summary,
 } from "@/lib/api";
+import { DEMO, REPO_URL, recordedQuestions } from "@/demo/demo";
 
 type Analysis = {
   stage: "summarizing" | "scanning" | "done" | "error";
@@ -141,10 +142,26 @@ export default function Home() {
         </p>
       </header>
 
+      {DEMO && (
+        <p
+          role="note"
+          className="rounded-md border border-sky-300 bg-sky-50 px-4 py-3 text-sm text-sky-900 dark:border-sky-800 dark:bg-sky-950 dark:text-sky-200"
+        >
+          <strong>Demo.</strong> Results are pre-recorded from the fictional samples
+          using a local model. To analyse your own contract privately,{" "}
+          <a href={REPO_URL} className="underline underline-offset-2">
+            run it locally
+          </a>
+          .
+        </p>
+      )}
+
       <div className="flex flex-wrap items-center gap-3">
-        <Button onClick={() => fileInput.current?.click()} disabled={loading}>
-          Upload PDF
-        </Button>
+        {!DEMO && (
+          <Button onClick={() => fileInput.current?.click()} disabled={loading}>
+            Upload PDF
+          </Button>
+        )}
         <input
           ref={fileInput}
           type="file"
@@ -168,7 +185,9 @@ export default function Home() {
             </Button>
           ))}
         <span className="text-sm text-muted-foreground">
-          Text PDFs up to 30 pages / 10 MB. Or try a fictional sample.
+          {DEMO
+            ? "Pick a fictional sample to see the analysis."
+            : "Text PDFs up to 30 pages / 10 MB. Or try a fictional sample."}
         </span>
       </div>
 
@@ -303,7 +322,11 @@ export default function Home() {
         <ChatPanel
           key={session.session_id}
           sessionId={session.session_id}
-          examples={packs.find((p) => p.id === session.pack)?.example_questions ?? []}
+          examples={
+            DEMO
+              ? recordedQuestions(session.pack)
+              : (packs.find((p) => p.id === session.pack)?.example_questions ?? [])
+          }
           onCite={setCitation}
         />
       )}
