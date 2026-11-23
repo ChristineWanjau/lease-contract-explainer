@@ -91,6 +91,11 @@ class Pack(BaseModel):
     name: str
     description: str
     sample_label: str = "Sample contract"
+    # Shown in the chat panel as starter questions for this type of contract.
+    example_questions: list[str] = Field(
+        default=["What are my main obligations?", "How can this contract be ended?"],
+        min_length=1,
+    )
     summary_fields: list[SummaryField] = Field(min_length=1)
     risk_categories: list[RiskCategory] = Field(min_length=1)
     legal_rules: list[LegalRule] = []

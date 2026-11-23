@@ -63,6 +63,7 @@ class PackOut(BaseModel):
     id: str
     name: str
     sample_label: str
+    example_questions: list[str]
 
 
 class PackIn(BaseModel):
@@ -167,7 +168,15 @@ def create_app(
 
     @app.get("/api/packs", response_model=list[PackOut])
     def list_packs() -> list[PackOut]:
-        return [PackOut(id=p.id, name=p.name, sample_label=p.sample_label) for p in loaded_packs]
+        return [
+            PackOut(
+                id=p.id,
+                name=p.name,
+                sample_label=p.sample_label,
+                example_questions=p.example_questions,
+            )
+            for p in loaded_packs
+        ]
 
     @app.post("/api/sample", response_model=SessionOut)
     def load_sample(pack: str | None = None) -> SessionOut:
