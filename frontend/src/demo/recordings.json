@@ -1,0 +1,1696 @@
+{
+ "model": "qwen3:8b",
+ "recorded_at": "2026-11-23",
+ "packs": [
+  {
+   "id": "general",
+   "name": "General contract",
+   "sample_label": "Fictional residential lease",
+   "example_questions": [
+    "Can I lose my deposit?",
+    "What happens if I leave early?"
+   ]
+  },
+  {
+   "id": "kenya_employment",
+   "name": "Kenyan employment contract",
+   "sample_label": "Fictional Kenyan employment contract",
+   "example_questions": [
+    "How much notice do I have to give?",
+    "Can my salary be deducted?"
+   ]
+  }
+ ],
+ "samples": {
+  "general": {
+   "session": {
+    "session_id": "demo-general",
+    "pack": "general",
+    "detected": null,
+    "chunks": [
+     {
+      "text": "SAMPLE RESIDENTIAL LEASE AGREEMENT\nFICTIONAL DOCUMENT FOR DEMONSTRATION ONLY. All names, places and figures are\ninvented.\nThis Lease is made between Acme Property Holdings Ltd (the Landlord) and Jane Example (the\nTenant) for the premises at Flat 4B, 12 Imaginary Road, Sampletown.",
+      "clause": null,
+      "page": 1
+     },
+     {
+      "text": "1. Term\nThe lease begins on 1 January 2027 and ends on 31 December 2027.",
+      "clause": "1",
+      "page": 1
+     },
+     {
+      "text": "2. Rent\nThe Tenant shall pay rent of 1,200 per month, due on the 1st day of each month.",
+      "clause": "2",
+      "page": 1
+     },
+     {
+      "text": "2.1 Late Payment\nRent paid after the 5th day of the month incurs a late fee of 50 per day.",
+      "clause": "2.1",
+      "page": 1
+     },
+     {
+      "text": "2.2 Rent Increase\nThe Landlord may increase the rent at any time by giving the Tenant 14 days notice.",
+      "clause": "2.2",
+      "page": 1
+     },
+     {
+      "text": "3. Security Deposit\nThe Tenant shall pay a security deposit equal to three months rent.",
+      "clause": "3",
+      "page": 1
+     },
+     {
+      "text": "3.1 Forfeiture\nThe Tenant shall forfeit the entire security deposit if the Tenant ends this lease for any reason\nbefore the end of the term, regardless of the condition of the premises.",
+      "clause": "3.1",
+      "page": 1
+     },
+     {
+      "text": "4. Automatic Renewal\nThis lease shall automatically renew for a further twelve months unless the Tenant gives written\nnotice of non-renewal at least 90 days before the end of the term.",
+      "clause": "4",
+      "page": 2
+     },
+     {
+      "text": "5. Early Termination\nIf the Tenant ends this lease early, the Tenant shall pay an early termination fee equal to all\nremaining rent for the full term, in addition to any forfeiture under clause 3.1.",
+      "clause": "5",
+      "page": 2
+     },
+     {
+      "text": "6. Repairs and Liability\nThe Tenant is responsible for all repairs to the premises, including structural repairs. The Tenant\nshall indemnify the Landlord against all claims, including those caused by the Landlord's own\nnegligence.",
+      "clause": "6",
+      "page": 2
+     },
+     {
+      "text": "7. Notices\nAll notices must be in writing and delivered by registered post.",
+      "clause": "7",
+      "page": 2
+     },
+     {
+      "text": "8. Changes to Terms\nThe Landlord may amend any term of this lease by notifying the Tenant. Continued occupation\nconstitutes acceptance of the amended terms.",
+      "clause": "8",
+      "page": 2
+     },
+     {
+      "text": "9. Governing Law\nThis lease is governed by the laws of Sampletown.",
+      "clause": "9",
+      "page": 2
+     }
+    ]
+   },
+   "analysis": [
+    {
+     "event": "summary",
+     "data": {
+      "summary": {
+       "parties": [
+        "Acme Property Holdings Ltd (Landlord)",
+        "Jane Example (Tenant)"
+       ],
+       "duration": "1 year, from 1 January 2027 to 31 December 2027",
+       "key_dates": [
+        "1 January 2027 (start)",
+        "31 December 2027 (end)",
+        "90 days before end of term (notice of non-renewal deadline)"
+       ],
+       "payments": [
+        "Rent of 1,200 per month, due on the 1st day of each month",
+        "Late fee of 50 per day if rent is paid after the 5th day of the month",
+        "Security deposit equal to three months rent",
+        "Early termination fee equal to all remaining rent for the full term"
+       ],
+       "obligations": [
+        "Pay rent on time",
+        "Pay late fee if rent is late",
+        "Pay rent increase if notified by the Landlord",
+        "Pay security deposit",
+        "Forfeit the entire security deposit if ending the lease early",
+        "Pay early termination fee if ending the lease early",
+        "Be responsible for all repairs to the premises",
+        "Indemnify the Landlord against all claims",
+        "Give written notice of non-renewal at least 90 days before the end of the term",
+        "All notices must be in writing and delivered by registered post"
+       ]
+      },
+      "fields": [
+       {
+        "name": "parties",
+        "label": "Parties",
+        "kind": "list"
+       },
+       {
+        "name": "duration",
+        "label": "Duration",
+        "kind": "single"
+       },
+       {
+        "name": "key_dates",
+        "label": "Key dates",
+        "kind": "list"
+       },
+       {
+        "name": "payments",
+        "label": "Payments",
+        "kind": "list"
+       },
+       {
+        "name": "obligations",
+        "label": "Your obligations",
+        "kind": "list"
+       }
+      ],
+      "disclaimer": "This is an automated explanation, not legal advice. It may be incomplete or wrong. For important decisions, consult a qualified lawyer."
+     }
+    },
+    {
+     "event": "risk_flag",
+     "data": {
+      "kind": "contract_risk",
+      "category": "price_increase",
+      "category_label": "Rent / price increases",
+      "severity": "medium",
+      "explanation": "This clause allows the other party to charge an additional fee for late payments, which can significantly increase the total cost for the signer if payments are not made on time.",
+      "question_to_ask": "Can the late fee be reduced or waived if payments are made within a shorter period?",
+      "citations": [
+       {
+        "clause": "2.1",
+        "page": 1,
+        "quote": "2.1 Late Payment\nRent paid after the 5th day of the month incurs a late fee of 50 per day."
+       }
+      ],
+      "legal": null
+     }
+    },
+    {
+     "event": "risk_flag",
+     "data": {
+      "kind": "contract_risk",
+      "category": "price_increase",
+      "category_label": "Rent / price increases",
+      "severity": "medium",
+      "explanation": "This clause allows the landlord to increase the rent at any time with just 14 days' notice, which could lead to significant financial burden for the tenant.",
+      "question_to_ask": "Can the landlord increase the rent at any time, and if so, what is the maximum amount they can increase it by?",
+      "citations": [
+       {
+        "clause": "2.2",
+        "page": 1,
+        "quote": "2.2 Rent Increase\nThe Landlord may increase the rent at any time by giving the Tenant 14 days notice."
+       }
+      ],
+      "legal": null
+     }
+    },
+    {
+     "event": "risk_flag",
+     "data": {
+      "kind": "contract_risk",
+      "category": "deposit_forfeiture",
+      "category_label": "Deposit / fee forfeiture",
+      "severity": "high",
+      "explanation": "This clause allows the landlord to take the entire security deposit from the tenant if the lease is ended early, even if the tenant has no fault or the property is in good condition.",
+      "question_to_ask": "Can the landlord take the entire security deposit if I end the lease early, and is there any way to avoid this?",
+      "citations": [
+       {
+        "clause": "3.1",
+        "page": 1,
+        "quote": "3.1 Forfeiture\nThe Tenant shall forfeit the entire security deposit if the Tenant ends this lease for any reason\nbefore the end of the term, regardless of the condition of the premises."
+       }
+      ],
+      "legal": null
+     }
+    },
+    {
+     "event": "risk_flag",
+     "data": {
+      "kind": "contract_risk",
+      "category": "automatic_renewal",
+      "category_label": "Automatic renewal",
+      "severity": "medium",
+      "explanation": "This clause means the lease will automatically renew for another twelve months unless the tenant provides written notice of non-renewal at least 90 days before the end of the current term. This could result in the tenant being bound to a new lease without their consent.",
+      "question_to_ask": "Can we agree on a shorter notice period or a way to terminate the lease without automatic renewal?",
+      "citations": [
+       {
+        "clause": "4",
+        "page": 2,
+        "quote": "4. Automatic Renewal\nThis lease shall automatically renew for a further twelve months unless the Tenant gives written\nnotice of non-renewal at least 90 days before the end of the term."
+       }
+      ],
+      "legal": null
+     }
+    },
+    {
+     "event": "risk_flag",
+     "data": {
+      "kind": "contract_risk",
+      "category": "early_termination",
+      "category_label": "Early termination / penalties",
+      "severity": "high",
+      "explanation": "This clause requires the Tenant to pay a significant early termination fee equal to the remaining rent for the full term, which could result in a large financial loss if the lease is ended early.",
+      "question_to_ask": "Can the early termination fee be reduced or waived under any circumstances, and what are the conditions for doing so?",
+      "citations": [
+       {
+        "clause": "5",
+        "page": 2,
+        "quote": "5. Early Termination\nIf the Tenant ends this lease early, the Tenant shall pay an early termination fee equal to all\nremaining rent for the full term, in addition to any forfeiture under clause 3.1."
+       }
+      ],
+      "legal": null
+     }
+    },
+    {
+     "event": "risk_flag",
+     "data": {
+      "kind": "contract_risk",
+      "category": "one_sided_liability",
+      "category_label": "One-sided liability / indemnity",
+      "severity": "high",
+      "explanation": "This clause places all repair and liability responsibilities on the tenant, even if the landlord's own negligence causes damage. This can result in significant financial burden for the tenant.",
+      "question_to_ask": "Can the landlord be held responsible for any damages caused by their own negligence, or is the tenant solely liable regardless of fault?",
+      "citations": [
+       {
+        "clause": "6",
+        "page": 2,
+        "quote": "6. Repairs and Liability\nThe Tenant is responsible for all repairs to the premises, including structural repairs. The Tenant\nshall indemnify the Landlord against all claims, including those caused by the Landlord's own\nnegligence."
+       }
+      ],
+      "legal": null
+     }
+    },
+    {
+     "event": "risk_flag",
+     "data": {
+      "kind": "contract_risk",
+      "category": "unilateral_changes",
+      "category_label": "Unilateral changes",
+      "severity": "high",
+      "explanation": "This clause allows the landlord to unilaterally change the lease terms without the tenant's agreement, which can lead to significant financial or legal consequences for the tenant.",
+      "question_to_ask": "Can the landlord change the lease terms without my agreement, and if so, what are the specific conditions or limitations on such changes?",
+      "citations": [
+       {
+        "clause": "8",
+        "page": 2,
+        "quote": "8. Changes to Terms\nThe Landlord may amend any term of this lease by notifying the Tenant. Continued occupation\nconstitutes acceptance of the amended terms."
+       }
+      ],
+      "legal": null
+     }
+    },
+    {
+     "event": "done",
+     "data": {
+      "skipped_clauses": [],
+      "skipped_rules": []
+     }
+    }
+   ],
+   "chat": {
+    "Can I lose my deposit?": [
+     {
+      "event": "token",
+      "data": {
+       "text": "Yes"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": ","
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " you"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " can"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " lose"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " your"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " deposit"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " if"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " you"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " end"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " the"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " lease"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " before"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " the"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " term"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " ends"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": ","
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " regardless"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " of"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " the"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " condition"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " of"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " the"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " premises"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " ["
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": "1"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": "]."
+      }
+     },
+     {
+      "event": "answer",
+      "data": {
+       "text": "Yes, you can lose your deposit if you end the lease before the term ends, regardless of the condition of the premises [1].",
+       "supported": true,
+       "citations": [
+        {
+         "clause": "3.1",
+         "page": 1,
+         "quote": "3.1 Forfeiture\nThe Tenant shall forfeit the entire security deposit if the Tenant ends this lease for any reason\nbefore the end of the term, regardless of the condition of the premises."
+        }
+       ]
+      }
+     },
+     {
+      "event": "done",
+      "data": {}
+     }
+    ],
+    "What happens if I leave early?": [
+     {
+      "event": "token",
+      "data": {
+       "text": "If"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " you"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " leave"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " early"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": ","
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " you"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " will"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " pay"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " an"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " early"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " termination"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " fee"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " equal"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " to"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " all"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " remaining"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " rent"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " for"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " the"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " full"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " term"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": ","
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " in"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " addition"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " to"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " losing"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " your"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " security"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " deposit"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " ["
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": "1"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": "]."
+      }
+     },
+     {
+      "event": "answer",
+      "data": {
+       "text": "If you leave early, you will pay an early termination fee equal to all remaining rent for the full term, in addition to losing your security deposit [1].",
+       "supported": true,
+       "citations": [
+        {
+         "clause": "5",
+         "page": 2,
+         "quote": "5. Early Termination\nIf the Tenant ends this lease early, the Tenant shall pay an early termination fee equal to all\nremaining rent for the full term, in addition to any forfeiture under clause 3.1."
+        }
+       ]
+      }
+     },
+     {
+      "event": "done",
+      "data": {}
+     }
+    ],
+    "Am I allowed to keep a pet?": [
+     {
+      "event": "token",
+      "data": {
+       "text": "The"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " contract"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " doesn"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": "'t"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " say"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": "."
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " I"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " couldn"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": "'t"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " find"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " anything"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " in"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " it"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " that"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " answers"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " this"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " question"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": "."
+      }
+     },
+     {
+      "event": "answer",
+      "data": {
+       "text": "The contract doesn't say. I couldn't find anything in it that answers this question.",
+       "supported": false,
+       "citations": []
+      }
+     },
+     {
+      "event": "done",
+      "data": {}
+     }
+    ]
+   }
+  },
+  "kenya_employment": {
+   "session": {
+    "session_id": "demo-kenya_employment",
+    "pack": "kenya_employment",
+    "detected": null,
+    "chunks": [
+     {
+      "text": "SAMPLE CONTRACT OF EMPLOYMENT\nFICTIONAL DOCUMENT FOR DEMONSTRATION ONLY. All names, places and figures are\ninvented.\nThis Contract is made between Example Traders Ltd of P.O. Box 00000, Nairobi (the Employer)\nand Jane Example, ID No. 00000000 (the Employee).",
+      "clause": null,
+      "page": 1
+     },
+     {
+      "text": "1. Position and Start Date\nThe Employee is employed as an Accounts Assistant starting on 1 February 2027.",
+      "clause": "1",
+      "page": 1
+     },
+     {
+      "text": "2. Probation\nThe first twelve months of employment are a probationary period, which the Employer may extend\nat its sole discretion. During probation either party may end this contract without notice.",
+      "clause": "2",
+      "page": 1
+     },
+     {
+      "text": "3. Salary\nThe Employee shall be paid a gross salary of KES 60,000 per month, payable in arrears.",
+      "clause": "3",
+      "page": 1
+     },
+     {
+      "text": "3.1 Deductions\nThe Employer may deduct from the Employee's salary any amount the Employer considers owed\nby the Employee, including the cost of any lost or damaged company property.",
+      "clause": "3.1",
+      "page": 1
+     },
+     {
+      "text": "4. Working Hours\nNormal working hours are 8am to 5pm, Monday to Saturday. The Employee shall work such\nadditional hours as the business requires, and the salary covers all hours worked.",
+      "clause": "4",
+      "page": 1
+     },
+     {
+      "text": "5. Annual Leave\nThe Employee is entitled to 14 working days of paid annual leave per year.",
+      "clause": "5",
+      "page": 1
+     },
+     {
+      "text": "6. Place of Work\nThe Employee's place of work is Nairobi. The Employer may transfer the Employee to any branch\nin Kenya at any time, and the Employee shall bear the cost of relocating.",
+      "clause": "6",
+      "page": 2
+     },
+     {
+      "text": "7. Termination\nAfter probation, either party may end this contract by giving 7 days written notice. The Employer\nmay dismiss the Employee summarily for any reason it considers sufficient, without a hearing.",
+      "clause": "7",
+      "page": 2
+     },
+     {
+      "text": "8. Confidentiality and Non-Competition\nFor three years after this contract ends, the Employee shall not work for or start any business in\nKenya that competes with the Employer.",
+      "clause": "8",
+      "page": 2
+     },
+     {
+      "text": "9. Intellectual Property\nEverything the Employee creates, whether during working hours or not, belongs to the Employer.",
+      "clause": "9",
+      "page": 2
+     },
+     {
+      "text": "10. Changes to this Contract\nThe Employer may change any term of this contract by posting a notice at the workplace.",
+      "clause": "10",
+      "page": 2
+     },
+     {
+      "text": "11. Governing Law\nThis contract is governed by the laws of Kenya.",
+      "clause": "11",
+      "page": 2
+     }
+    ]
+   },
+   "analysis": [
+    {
+     "event": "summary",
+     "data": {
+      "summary": {
+       "employer_and_employee": [
+        "Example Traders Ltd of P.O. Box 00000, Nairobi (the Employer)",
+        "Jane Example, ID No. 00000000 (the Employee)"
+       ],
+       "job_title": "Accounts Assistant",
+       "start_date_and_term": "Starts on 1 February 2027. The term is not specified, but the first twelve months are a probationary period, which the Employer may extend at its sole discretion.",
+       "probation": "The first twelve months of employment are a probationary period, which the Employer may extend at its sole discretion. During probation either party may end this contract without notice.",
+       "salary": "The Employee shall be paid a gross salary of KES 60,000 per month, payable in arrears. The Employer may deduct from the Employee's salary any amount the Employer considers owed by the Employee, including the cost of any lost or damaged company property.",
+       "working_hours": "Normal working hours are 8am to 5pm, Monday to Saturday. The Employee shall work such additional hours as the business requires, and the salary covers all hours worked.",
+       "leave": [
+        "14 working days of paid annual leave per year"
+       ],
+       "notice_period": "After probation, either party may end this contract by giving 7 days written notice.",
+       "your_obligations": [
+        "The Employee shall not work for or start any business in Kenya that competes with the Employer for three years after this contract ends.",
+        "Everything the Employee creates, whether during working hours or not, belongs to the Employer.",
+        "The Employee's place of work is Nairobi. The Employer may transfer the Employee to any branch in Kenya at any time, and the Employee shall bear the cost of relocating."
+       ]
+      },
+      "fields": [
+       {
+        "name": "employer_and_employee",
+        "label": "Employer and employee",
+        "kind": "list"
+       },
+       {
+        "name": "job_title",
+        "label": "Job title",
+        "kind": "single"
+       },
+       {
+        "name": "start_date_and_term",
+        "label": "Start date and term",
+        "kind": "single"
+       },
+       {
+        "name": "probation",
+        "label": "Probation",
+        "kind": "single"
+       },
+       {
+        "name": "salary",
+        "label": "Salary",
+        "kind": "single"
+       },
+       {
+        "name": "working_hours",
+        "label": "Working hours",
+        "kind": "single"
+       },
+       {
+        "name": "leave",
+        "label": "Leave",
+        "kind": "list"
+       },
+       {
+        "name": "notice_period",
+        "label": "Notice period",
+        "kind": "single"
+       },
+       {
+        "name": "your_obligations",
+        "label": "Your obligations",
+        "kind": "list"
+       }
+      ],
+      "disclaimer": "This is an automated explanation, not legal advice. It may be incomplete or wrong. For important decisions, consult a qualified lawyer."
+     }
+    },
+    {
+     "event": "risk_flag",
+     "data": {
+      "kind": "contract_risk",
+      "category": "probation",
+      "category_label": "Probation terms",
+      "severity": "high",
+      "explanation": "This clause allows the employer to extend the probation period indefinitely and terminate the contract without notice, which gives the employer significant control and reduces the employee's job security.",
+      "question_to_ask": "Can the employer extend the probation period indefinitely, and what are the conditions for termination without notice?",
+      "citations": [
+       {
+        "clause": "2",
+        "page": 1,
+        "quote": "2. Probation\nThe first twelve months of employment are a probationary period, which the Employer may extend\nat its sole discretion. During probation either party may end this contract without notice."
+       }
+      ],
+      "legal": null
+     }
+    },
+    {
+     "event": "risk_flag",
+     "data": {
+      "kind": "contract_risk",
+      "category": "pay_deductions",
+      "category_label": "Pay deductions",
+      "severity": "high",
+      "explanation": "This clause allows the employer to deduct any amount from the employee's salary without prior agreement or justification, which can lead to significant financial loss for the employee.",
+      "question_to_ask": "Can the employer deduct any amount from my salary without my agreement, and what are the specific conditions for such deductions?",
+      "citations": [
+       {
+        "clause": "3.1",
+        "page": 1,
+        "quote": "3.1 Deductions\nThe Employer may deduct from the Employee's salary any amount the Employer considers owed\nby the Employee, including the cost of any lost or damaged company property."
+       }
+      ],
+      "legal": null
+     }
+    },
+    {
+     "event": "risk_flag",
+     "data": {
+      "kind": "contract_risk",
+      "category": "overtime",
+      "category_label": "Unpaid or open-ended overtime",
+      "severity": "medium",
+      "explanation": "This clause implies that the employee is required to work additional hours without guaranteed compensation, which could lead to overwork without proper pay.",
+      "question_to_ask": "Does the clause guarantee additional pay for all extra hours worked, or is it at the employer's discretion?",
+      "citations": [
+       {
+        "clause": "4",
+        "page": 1,
+        "quote": "4. Working Hours\nNormal working hours are 8am to 5pm, Monday to Saturday. The Employee shall work such\nadditional hours as the business requires, and the salary covers all hours worked."
+       }
+      ],
+      "legal": null
+     }
+    },
+    {
+     "event": "risk_flag",
+     "data": {
+      "kind": "contract_risk",
+      "category": "transfer",
+      "category_label": "Transfer or relocation",
+      "severity": "medium",
+      "explanation": "This clause allows the employer to move the employee to any branch in Kenya at any time, and the employee is responsible for the cost of relocation. This can limit the employee's job security and impose financial burdens.",
+      "question_to_ask": "Can the employer transfer me to another branch in Kenya without prior notice, and will they cover the cost of relocation?",
+      "citations": [
+       {
+        "clause": "6",
+        "page": 2,
+        "quote": "6. Place of Work\nThe Employee's place of work is Nairobi. The Employer may transfer the Employee to any branch\nin Kenya at any time, and the Employee shall bear the cost of relocating."
+       }
+      ],
+      "legal": null
+     }
+    },
+    {
+     "event": "risk_flag",
+     "data": {
+      "kind": "contract_risk",
+      "category": "termination",
+      "category_label": "Notice and termination",
+      "severity": "high",
+      "explanation": "This clause allows the employer to terminate the employee's employment immediately without any reason or hearing, which gives the employer significant power and leaves the employee with little recourse.",
+      "question_to_ask": "Can the employer terminate my employment without any reason or hearing, and is there any way to challenge this provision?",
+      "citations": [
+       {
+        "clause": "7",
+        "page": 2,
+        "quote": "7. Termination\nAfter probation, either party may end this contract by giving 7 days written notice. The Employer\nmay dismiss the Employee summarily for any reason it considers sufficient, without a hearing."
+       }
+      ],
+      "legal": null
+     }
+    },
+    {
+     "event": "risk_flag",
+     "data": {
+      "kind": "contract_risk",
+      "category": "restrictive_covenant",
+      "category_label": "Non-compete / confidentiality after leaving",
+      "severity": "high",
+      "explanation": "This clause restricts the employee from working in a competitive field in Kenya for three years after the contract ends, which can significantly limit their future employment opportunities and career choices.",
+      "question_to_ask": "Can the non-compete clause be modified to a shorter duration or a narrower geographic scope?",
+      "citations": [
+       {
+        "clause": "8",
+        "page": 2,
+        "quote": "8. Confidentiality and Non-Competition\nFor three years after this contract ends, the Employee shall not work for or start any business in\nKenya that competes with the Employer."
+       }
+      ],
+      "legal": null
+     }
+    },
+    {
+     "event": "risk_flag",
+     "data": {
+      "kind": "contract_risk",
+      "category": "work_ownership",
+      "category_label": "Ownership of your work",
+      "severity": "high",
+      "explanation": "This clause gives the employer ownership of all intellectual property created by the employee, even outside of working hours. This can limit the employee's ability to use or profit from their own work.",
+      "question_to_ask": "Can the employer claim ownership of any intellectual property I create outside of working hours, and if so, what are the terms?",
+      "citations": [
+       {
+        "clause": "9",
+        "page": 2,
+        "quote": "9. Intellectual Property\nEverything the Employee creates, whether during working hours or not, belongs to the Employer."
+       }
+      ],
+      "legal": null
+     }
+    },
+    {
+     "event": "risk_flag",
+     "data": {
+      "kind": "contract_risk",
+      "category": "unilateral_changes",
+      "category_label": "Employer changes terms alone",
+      "severity": "high",
+      "explanation": "This clause allows the employer to unilaterally change the contract terms without the employee's agreement, which can lead to significant changes in working conditions, responsibilities, or compensation without negotiation.",
+      "question_to_ask": "Can the employer make changes to the contract without my agreement, and what process is in place to review or challenge such changes?",
+      "citations": [
+       {
+        "clause": "10",
+        "page": 2,
+        "quote": "10. Changes to this Contract\nThe Employer may change any term of this contract by posting a notice at the workplace."
+       }
+      ],
+      "legal": null
+     }
+    },
+    {
+     "event": "done",
+     "data": {
+      "skipped_clauses": [],
+      "skipped_rules": []
+     }
+    }
+   ],
+   "chat": {
+    "How much notice do I have to give?": [
+     {
+      "event": "token",
+      "data": {
+       "text": "If"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " you"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " are"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " ending"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " the"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " contract"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " after"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " the"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " probation"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " period"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": ","
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " you"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " need"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " to"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " give"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " "
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": "7"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " days"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " written"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " notice"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " ["
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": "1"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": "]."
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " If"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " you"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " are"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " ending"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " the"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " contract"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " during"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " the"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " probation"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " period"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": ","
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " you"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " don"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": "'t"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " need"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " to"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " give"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " any"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " notice"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " ["
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": "2"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": "]."
+      }
+     },
+     {
+      "event": "answer",
+      "data": {
+       "text": "If you are ending the contract after the probation period, you need to give 7 days written notice [1]. If you are ending the contract during the probation period, you don't need to give any notice [2].",
+       "supported": true,
+       "citations": [
+        {
+         "clause": "7",
+         "page": 2,
+         "quote": "7. Termination\nAfter probation, either party may end this contract by giving 7 days written notice. The Employer\nmay dismiss the Employee summarily for any reason it considers sufficient, without a hearing."
+        },
+        {
+         "clause": "2",
+         "page": 1,
+         "quote": "2. Probation\nThe first twelve months of employment are a probationary period, which the Employer may extend\nat its sole discretion. During probation either party may end this contract without notice."
+        }
+       ]
+      }
+     },
+     {
+      "event": "done",
+      "data": {}
+     }
+    ],
+    "Can my salary be deducted?": [
+     {
+      "event": "token",
+      "data": {
+       "text": "Yes"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": ","
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " the"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " Employer"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " may"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " deduct"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " from"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " your"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " salary"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " the"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " cost"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " of"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " any"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " lost"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " or"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " damaged"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " company"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " property"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " ["
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": "1"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": "]."
+      }
+     },
+     {
+      "event": "answer",
+      "data": {
+       "text": "Yes, the Employer may deduct from your salary the cost of any lost or damaged company property [1].",
+       "supported": true,
+       "citations": [
+        {
+         "clause": "3.1",
+         "page": 1,
+         "quote": "3.1 Deductions\nThe Employer may deduct from the Employee's salary any amount the Employer considers owed\nby the Employee, including the cost of any lost or damaged company property."
+        }
+       ]
+      }
+     },
+     {
+      "event": "done",
+      "data": {}
+     }
+    ],
+    "Am I allowed to keep a pet?": [
+     {
+      "event": "token",
+      "data": {
+       "text": "The"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " contract"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " doesn"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": "'t"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " say"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": "."
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " I"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " couldn"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": "'t"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " find"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " anything"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " in"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " it"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " that"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " answers"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " this"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": " question"
+      }
+     },
+     {
+      "event": "token",
+      "data": {
+       "text": "."
+      }
+     },
+     {
+      "event": "answer",
+      "data": {
+       "text": "The contract doesn't say. I couldn't find anything in it that answers this question.",
+       "supported": false,
+       "citations": []
+      }
+     },
+     {
+      "event": "done",
+      "data": {}
+     }
+    ]
+   }
+  }
+ }
+}
