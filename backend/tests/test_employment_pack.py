@@ -212,3 +212,13 @@ def test_a_general_category_is_not_accepted_under_the_employment_pack():
     sid = client.post("/api/sample", params={"pack": "kenya_employment"}).json()["session_id"]
 
     assert "risk_flag" not in [n for n, _ in read_events(client, sid)]
+
+
+def test_each_pack_lists_example_questions_for_the_chat():
+    client = make_client()
+
+    examples = {p["id"]: p["example_questions"] for p in client.get("/api/packs").json()}
+
+    assert examples["general"] == ["Can I lose my deposit?", "What happens if I leave early?"]
+    assert len(examples["kenya_employment"]) == 2
+    assert "deposit" not in " ".join(examples["kenya_employment"]).lower()

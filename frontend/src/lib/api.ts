@@ -1,3 +1,13 @@
+import {
+  ANALYSIS_EVENT_DELAY_MS,
+  CHAT_TOKEN_DELAY_MS,
+  DEMO,
+  demo,
+  packOf,
+  replay,
+  sampleFor,
+} from "@/demo/demo";
+
 export type Chunk = {
   text: string;
   clause: string | null;
@@ -16,6 +26,7 @@ export type PackOut = {
   id: string;
   name: string;
   sample_label: string;
+  example_questions: string[];
 };
 
 export const API_URL =
@@ -41,19 +52,44 @@ export type Citation = {
 
 export type Severity = "high" | "medium" | "low";
 
+/** Where a legal requirement comes from. Always from configuration, never the model. */
+export type LegalSource = {
+  act: string;
+  section: string;
+  link: string;
+  verified: boolean;
+  last_reviewed: string | null;
+};
+
 export type RiskFlag = {
+  kind: "contract_risk" | "legal_rule";
   category: string;
   category_label: string;
   severity: Severity;
   explanation: string;
   question_to_ask: string;
   citations: Citation[];
+  legal: LegalSource | null;
+};
+
+/** A legal requirement the contract says nothing about: cites the Act, not a clause. */
+export type MissingItem = {
+  rule: string;
+  topic: string;
+  severity: Severity;
+  requirement: string;
+  question_to_ask: string;
+  legal: LegalSource;
 };
 
 export type AnalysisEvent =
   | { event: "summary"; data: { summary: Summary; disclaimer: string } }
   | { event: "risk_flag"; data: RiskFlag }
-  | { event: "done"; data: { skipped_clauses: (string | null)[] } }
+  | { event: "missing_item"; data: MissingItem }
+  | {
+      event: "done";
+      data: { skipped_clauses: (string | null)[]; skipped_rules: string[] };
+    }
   | { event: "error"; data: { message: string } };
 
 /** Stream the analysis of a session; calls onEvent for each Server-Sent Event. */
@@ -61,25 +97,24 @@ export function streamAnalysis(
   sessionId: string,
   onEvent: (e: AnalysisEvent) => void,
 ): () => void {
+  if (DEMO) {
+    return replay(
+      sampleFor(packOf(sessionId)).analysis,
+      (e) => onEvent(toAnalysisEvent(e.event, e.data)),
+      ANALYSIS_EVENT_DELAY_MS,
+    );
+  }
   const source = new EventSource(
     `${API_URL}/api/sessions/${sessionId}/analyze`,
   );
   source.addEventListener("summary", (msg) => {
-    const raw: {
-      summary: Summary["values"];
-      fields: SummaryField[];
-      disclaimer: string;
-    } = JSON.parse(msg.data);
-    onEvent({
-      event: "summary",
-      data: {
-        summary: { fields: raw.fields, values: raw.summary },
-        disclaimer: raw.disclaimer,
-      },
-    });
+    onEvent(toAnalysisEvent("summary", JSON.parse(msg.data)));
   });
   source.addEventListener("risk_flag", (msg) => {
     onEvent({ event: "risk_flag", data: JSON.parse(msg.data) });
+  });
+  source.addEventListener("missing_item", (msg) => {
+    onEvent({ event: "missing_item", data: JSON.parse(msg.data) });
   });
   source.addEventListener("done", (msg) => {
     source.close();
@@ -100,6 +135,25 @@ export function streamAnalysis(
   return () => source.close();
 }
 
+/** Shape a raw backend event (live or recorded) for the UI. */
+function toAnalysisEvent(event: string, data: unknown): AnalysisEvent {
+  if (event === "summary") {
+    const raw = data as {
+      summary: Summary["values"];
+      fields: SummaryField[];
+      disclaimer: string;
+    };
+    return {
+      event: "summary",
+      data: {
+        summary: { fields: raw.fields, values: raw.summary },
+        disclaimer: raw.disclaimer,
+      },
+    };
+  }
+  return { event, data } as AnalysisEvent;
+}
+
 async function errorMessage(res: Response, fallback: string): Promise<string> {
   const data = await res.json().catch(() => null);
   const message: unknown = data?.detail?.message;
@@ -107,12 +161,17 @@ async function errorMessage(res: Response, fallback: string): Promise<string> {
 }
 
 export async function listPacks(): Promise<PackOut[]> {
+  if (DEMO) return demo.packs as PackOut[];
   const res = await fetch(`${API_URL}/api/packs`);
   if (!res.ok) throw new Error(await errorMessage(res, "Could not load contract types"));
   return res.json();
 }
 
 export async function loadSample(pack?: string): Promise<SessionOut> {
+  if (DEMO) {
+    const id = pack ?? (demo.packs as PackOut[])[0].id;
+    return sampleFor(id).session as SessionOut;
+  }
   const query = pack ? `?pack=${encodeURIComponent(pack)}` : "";
   const res = await fetch(`${API_URL}/api/sample${query}`, { method: "POST" });
   if (!res.ok) throw new Error(await errorMessage(res, "Could not load the sample contract"));
@@ -120,6 +179,13 @@ export async function loadSample(pack?: string): Promise<SessionOut> {
 }
 
 export async function setPack(sessionId: string, pack: string): Promise<SessionOut> {
+  if (DEMO) {
+    // Only each sample's own type was recorded, so switching loads that type's sample.
+    if (pack === packOf(sessionId)) return sampleFor(pack).session as SessionOut;
+    throw new Error(
+      "The demo only has each sample analysed as its own type. Run it locally to switch types.",
+    );
+  }
   const res = await fetch(`${API_URL}/api/sessions/${sessionId}/pack`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
@@ -130,6 +196,9 @@ export async function setPack(sessionId: string, pack: string): Promise<SessionO
 }
 
 export async function uploadContract(file: File): Promise<SessionOut> {
+  if (DEMO) {
+    throw new Error("Uploads are off in the demo. Run it locally to analyse your own contract.");
+  }
   const body = new FormData();
   body.append("file", file);
   const res = await fetch(`${API_URL}/api/upload`, { method: "POST", body });
@@ -156,6 +225,32 @@ export async function askQuestion(
   onEvent: (e: ChatEvent) => void,
   signal?: AbortSignal,
 ): Promise<void> {
+  if (DEMO) {
+    const recorded = sampleFor(packOf(sessionId)).chat[question];
+    if (!recorded) {
+      onEvent({
+        event: "error",
+        data: { message: "The demo only has recorded answers. Run it locally to ask your own." },
+      });
+      return;
+    }
+    // Replay tokens one at a time, then the final events, like the live stream.
+    await new Promise<void>((resolve) => {
+      const cancel = replay(
+        recorded,
+        (e) => {
+          onEvent(e as ChatEvent);
+          if (e.event === "done" || e.event === "error") resolve();
+        },
+        CHAT_TOKEN_DELAY_MS,
+      );
+      signal?.addEventListener("abort", () => {
+        cancel();
+        resolve();
+      });
+    });
+    return;
+  }
   let res: Response;
   try {
     res = await fetch(`${API_URL}/api/sessions/${sessionId}/chat`, {

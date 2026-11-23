@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { ChatPanel } from "@/components/chat-panel";
-import { CitationPanel, RiskCard } from "@/components/risk-card";
+import { CitationPanel, MissingItemCard, RiskCard } from "@/components/risk-card";
 import { SummaryCard } from "@/components/summary-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -21,21 +21,32 @@ import {
   streamAnalysis,
   uploadContract,
   type Citation,
+  type MissingItem,
   type PackOut,
   type RiskFlag,
   type SessionOut,
   type Summary,
 } from "@/lib/api";
+import { DEMO, REPO_URL, recordedQuestions } from "@/demo/demo";
 
 type Analysis = {
   stage: "summarizing" | "scanning" | "done" | "error";
   summary: Summary | null;
   flags: RiskFlag[];
+  missing: MissingItem[];
   skipped: (string | null)[];
+  skippedRules: string[];
   message?: string;
 };
 
-const START: Analysis = { stage: "summarizing", summary: null, flags: [], skipped: [] };
+const START: Analysis = {
+  stage: "summarizing",
+  summary: null,
+  flags: [],
+  missing: [],
+  skipped: [],
+  skippedRules: [],
+};
 
 export default function Home() {
   const [session, setSession] = useState<SessionOut | null>(null);
@@ -69,8 +80,15 @@ export default function Home() {
             return { ...prev, stage: "scanning", summary: e.data.summary };
           case "risk_flag":
             return { ...prev, flags: [...prev.flags, e.data] };
+          case "missing_item":
+            return { ...prev, missing: [...prev.missing, e.data] };
           case "done":
-            return { ...prev, stage: "done", skipped: e.data.skipped_clauses };
+            return {
+              ...prev,
+              stage: "done",
+              skipped: e.data.skipped_clauses,
+              skippedRules: e.data.skipped_rules,
+            };
           case "error":
             return { ...prev, stage: "error", message: e.data.message };
         }
@@ -124,10 +142,26 @@ export default function Home() {
         </p>
       </header>
 
+      {DEMO && (
+        <p
+          role="note"
+          className="rounded-md border border-sky-300 bg-sky-50 px-4 py-3 text-sm text-sky-900 dark:border-sky-800 dark:bg-sky-950 dark:text-sky-200"
+        >
+          <strong>Demo.</strong> Results are pre-recorded from the fictional samples
+          using a local model. To analyse your own contract privately,{" "}
+          <a href={REPO_URL} className="underline underline-offset-2">
+            run it locally
+          </a>
+          .
+        </p>
+      )}
+
       <div className="flex flex-wrap items-center gap-3">
-        <Button onClick={() => fileInput.current?.click()} disabled={loading}>
-          Upload PDF
-        </Button>
+        {!DEMO && (
+          <Button onClick={() => fileInput.current?.click()} disabled={loading}>
+            Upload PDF
+          </Button>
+        )}
         <input
           ref={fileInput}
           type="file"
@@ -151,7 +185,9 @@ export default function Home() {
             </Button>
           ))}
         <span className="text-sm text-muted-foreground">
-          Text PDFs up to 30 pages / 10 MB. Or try a fictional sample.
+          {DEMO
+            ? "Pick a fictional sample to see the analysis."
+            : "Text PDFs up to 30 pages / 10 MB. Or try a fictional sample."}
         </span>
       </div>
 
@@ -260,12 +296,37 @@ export default function Home() {
         </section>
       )}
 
+      {analysis && (analysis.missing.length > 0 || analysis.skippedRules.length > 0) && (
+        <section className="space-y-3" aria-label="Missing from your contract" aria-live="polite">
+          <h2 className="text-lg font-medium">
+            Missing from your contract ({analysis.missing.length})
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            The law expects these, but your contract says nothing about them.
+          </p>
+          {analysis.missing.map((item) => (
+            <MissingItemCard key={item.rule} item={item} />
+          ))}
+          {analysis.skippedRules.length > 0 && (
+            <p className="text-sm text-muted-foreground">
+              Couldn&apos;t check {analysis.skippedRules.length} legal requirement
+              {analysis.skippedRules.length === 1 ? "" : "s"} for missing terms.
+            </p>
+          )}
+        </section>
+      )}
+
       <CitationPanel citation={citation} onClose={() => setCitation(null)} />
 
       {session && (
         <ChatPanel
           key={session.session_id}
           sessionId={session.session_id}
+          examples={
+            DEMO
+              ? recordedQuestions(session.pack)
+              : (packs.find((p) => p.id === session.pack)?.example_questions ?? [])
+          }
           onCite={setCitation}
         />
       )}
